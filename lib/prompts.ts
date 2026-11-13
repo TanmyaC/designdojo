@@ -87,7 +87,7 @@ Reply with ONLY a JSON object:
 }
 const SLIM_RULES = `OUTPUT RULES FOR THIS APP (these override any earlier format or visual instructions):
 - SLIM. The page shows the high-level design first, then the low-level design. Every section has a "Deep dive" button, so give only the essential answer here. No preamble, no repetition, no textbook background.
-- STAY WITHIN THE FOUR MIRO COMPETENCIES: Storage; Distributed systems & scalability; Observability & reliability; Problem scoping, collaboration & feedback. Leave out security, auth, cost, CI/CD, team process, compliance and UI unless the agreed scope makes them central to the problem.
+- STAY WITHIN THE FOUR COMPETENCIES: Storage; Distributed systems & scalability; Observability & reliability; Problem scoping, collaboration & feedback. Leave out security, auth, cost, CI/CD, team process, compliance and UI unless the agreed scope makes them central to the problem.
 - Every text field is at most 25 words unless stated. Prefer numbers to adjectives. Name a technology only with the one property you rely on (e.g. "Kafka: ordered per partition, keyed by board_id").
 - DIAGRAMS ARE DATA, NOT CODE. Never write Mermaid or any diagram source. The app draws diagrams from the JSON fields you return.
 - Reply with ONLY the JSON object requested, no other text.`;

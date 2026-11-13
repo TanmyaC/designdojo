@@ -17,7 +17,7 @@ npm run dev                  # http://localhost:3000
 | Variable | Required | Purpose |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | yes | Server-side only. Never sent to the browser. |
-| `CLAUDE_MODEL` | no | Defaults to `claude-opus-5-5`. |
+| `CLAUDE_MODEL` | no | Defaults to `claude-sonnet-5-5`. Set `claude-opus-5-5` to use Opus. |
 | `ACCESS_CODE` | no | If set, visitors must enter this code before Alex will talk to them. **Recommended for any public deployment**, since every interview spends your API credits. |
 
 ## Deploy

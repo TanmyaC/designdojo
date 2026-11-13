@@ -4,7 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 /* One client per server process. Reads ANTHROPIC_API_KEY from the environment. */
 const client = new Anthropic();
 
-export const MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
+export const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5-5";
 type Effort = "low" | "medium" | "high" | "xhigh" | "max";
 
 export class AppError extends Error {

@@ -45,7 +45,7 @@ export interface Session {
   customSpec?: string;       // hidden spec text the candidate wrote for a custom question
   level: Level; duration: number;
   style: Style; rubric: Rubric; quoteEvidence: boolean;
-  status: "starting" | "interview" | "debrief" | "solution";
+  status: "starting" | "interview" | "ended" | "debrief" | "solution";   // "ended": over, no debrief requested yet
   spec: Spec | null; facts: string[]; probed: Record<string, boolean>; phase: Phase; hints: number;
   startedAt: number | null; endedAt: number | null; createdAt: number;
   transcript: Turn[];

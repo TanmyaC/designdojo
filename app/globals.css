@@ -429,3 +429,4 @@ h2.level{font-size:15px;font-family:var(--body);font-weight:600;color:var(--blue
 .mic-btn.live.hearing{background:var(--red);border-color:var(--red);box-shadow:0 0 0 4px var(--red-soft)}
 .mic-btn:disabled{opacity:.45;cursor:default}
 @media (prefers-reduced-motion: reduce){.vb-dot{animation:none!important}}
+.modal{max-width:480px}

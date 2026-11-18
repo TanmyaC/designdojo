@@ -14,7 +14,7 @@ interface TurnReply { reply: string; new_facts?: string[]; probed?: string[]; ph
 type Img = { media_type: "image/png" | "image/jpeg" | "image/gif" | "image/webp"; data: string; name: string };
 
 export default function Room() {
-  const mounted = useMounted(); const router = useRouter(); const settings = useSettings(); const { confirm, toast } = useUI();
+  const mounted = useMounted(); const router = useRouter(); const settings = useSettings(); const { confirm, choose, toast } = useUI();
   const [s, setS] = useState<Session | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export default function Room() {
   useEffect(() => {
     if (!mounted) return;
     const id = store.currentId(); const cur = id ? store.get(id) : null;
-    if (cur && (cur.status === "debrief" || cur.status === "solution")) { router.replace(`/session/${cur.id}`); return; }
+    if (cur && (cur.status === "ended" || cur.status === "debrief" || cur.status === "solution")) { router.replace(`/session/${cur.id}`); return; }
     setS(cur && (cur.status === "interview" || cur.status === "starting") ? cur : null); setLoaded(true);
   }, [mounted, router]);
 
@@ -122,9 +122,19 @@ export default function Room() {
       if (await confirm({ title: "Discard this interview?", body: "You haven't answered yet, so there's nothing to debrief.", ok: "Discard", danger: true })) { store.remove(cur.id); router.push("/new"); }
       return;
     }
-    if (!(await confirm({ title: "End the interview?", body: "Alex will step out of character and write your debrief. You can't continue the interview afterwards.", ok: "End and get debrief" }))) return;
-    const fin = { ...cur, endedAt: Date.now(), status: "debrief" as const };
-    store.put(fin); setS(null); router.push(`/session/${cur.id}`);
+    const pick = await choose({
+      title: "End the interview?",
+      body: "You can't continue it afterwards. End it now and it's saved to History, where you can get the debrief any time. Or get the debrief now: Alex steps out of character and grades your answers.",
+      options: [{ id: "end", label: "End interview" }, { id: "debrief", label: "End and get debrief", kind: "primary" }],
+    });
+    if (!pick) return;
+    const latest = sRef.current || cur;
+    if (pick === "end") {
+      store.put({ ...latest, endedAt: Date.now(), status: "ended" }); store.setCurrent(null);
+      setS(null); toast("Interview saved. Get its debrief from History any time."); router.push("/history");
+      return;
+    }
+    store.put({ ...latest, endedAt: Date.now(), status: "debrief" }); setS(null); router.push(`/session/${cur.id}`);
   }
 
   function onFile(f: File | undefined) {

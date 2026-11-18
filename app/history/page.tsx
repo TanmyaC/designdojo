@@ -38,7 +38,7 @@ export default function History() {
         </div>
 
         {pending.map((s) => (
-          <div key={s.id} className="banner"><div style={{ flex: 1 }}><b>Debrief not written yet</b><div style={{ fontSize: 14 }}>{s.question || s.spec?.question}</div></div><Link href={`/session/${s.id}`} className="btn">Get the debrief</Link></div>
+          <div key={s.id} className="banner"><div style={{ flex: 1 }}><b>{s.status === "ended" ? "Ended without a debrief" : "Debrief not written yet"}</b><div style={{ fontSize: 14 }}>{s.question || s.spec?.question}</div></div><Link href={`/session/${s.id}`} className="btn">Get the debrief</Link></div>
         ))}
 
         {!done.length ? (

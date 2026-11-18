@@ -79,7 +79,8 @@ export default function SessionPage() {
 
   useEffect(() => {
     if (!s) return;
-    if (!s.debrief && !running.current.debrief && !dErr) runDebrief();
+    // An interview ended without a debrief waits for "Get the debrief" instead of spending credits on open.
+    if (!s.debrief && s.status !== "ended" && !running.current.debrief && !dErr) runDebrief();
     else if (s.debrief && s.status === "solution" && (!s.solution.model || !s.solution.cmp) && !running.current.solution && !solErr) runSolution();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s?.id, s?.debrief, s?.status]);
@@ -89,6 +90,8 @@ export default function SessionPage() {
 
   const writeSolution = () => { const next: Session = { ...s, status: "solution" }; save(() => next); setTab("solution"); runSolution(false, next); };
   const hasSolutionTab = s.status === "solution";
+  /* Switching to "debrief" lets the effect above start it, exactly as ending with a debrief does. */
+  const getDebrief = () => save((x) => ({ ...x, status: "debrief" }));
 
   return (
     <>
@@ -107,6 +110,12 @@ export default function SessionPage() {
         {tab === "debrief" && (
           s.debrief ? <DebriefView s={s} onSolution={() => (hasSolutionTab ? setTab("solution") : writeSolution())} solutionReady={!!s.solution.model}
             onNew={() => router.push("/new")} />
+            : s.status === "ended" ? (
+              <div className="card stack" style={{ gap: 12, alignItems: "flex-start" }}>
+                <h2 style={{ fontSize: 22 }}>No debrief yet</h2>
+                <p className="muted" style={{ margin: 0 }}>This interview ended without one. Alex can step out of character now and grade it, with evidence from your answers. It usually takes a minute or two.</p>
+                <button type="button" className="btn primary" onClick={getDebrief}>Get the debrief</button>
+              </div>)
             : dErr ? <div className="card"><p>{dErr}</p><button type="button" className="btn primary" onClick={runDebrief}>Try again</button></div>
             : <div className="card"><Thinking label="Alex is writing your debrief. This usually takes a minute or two." /></div>
         )}

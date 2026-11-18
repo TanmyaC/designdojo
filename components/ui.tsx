@@ -88,37 +88,47 @@ export function BudgetMini({ labels = true, durations }: { labels?: boolean; dur
   );
 }
 
-/* ---------- toast + confirm dialog ---------- */
+/* ---------- toast + dialogs ---------- */
+export interface ChoiceOption { id: string; label: string; kind?: "primary" | "danger" }
+type Choose = (o: { title: string; body?: string; options: ChoiceOption[] }) => Promise<string | null>;
 type Confirm = (o: { title: string; body?: string; ok: string; danger?: boolean }) => Promise<boolean>;
-const Ctx = createContext<{ toast: (m: string) => void; confirm: Confirm }>({ toast: () => {}, confirm: async () => false });
+const Ctx = createContext<{ toast: (m: string) => void; confirm: Confirm; choose: Choose }>({ toast: () => {}, confirm: async () => false, choose: async () => null });
 export const useUI = () => useContext(Ctx);
 
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const [msg, setMsg] = useState<string | null>(null);
-  const [dlg, setDlg] = useState<{ title: string; body?: string; ok: string; danger?: boolean; resolve: (v: boolean) => void } | null>(null);
+  const [dlg, setDlg] = useState<{ title: string; body?: string; options: ChoiceOption[]; resolve: (v: string | null) => void } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const toast = useCallback((m: string) => { setMsg(m); clearTimeout(timer.current); timer.current = setTimeout(() => setMsg(null), 4200); }, []);
-  const confirm = useCallback<Confirm>((o) => new Promise((resolve) => setDlg({ ...o, resolve })), []);
+  /** A dialog with Cancel plus one or more choices. Resolves with the chosen id, or null (Cancel, Escape, click outside). */
+  const choose = useCallback<Choose>((o) => new Promise((resolve) => setDlg({ ...o, resolve })), []);
+  /** Yes/no confirmation, built on choose(). */
+  const confirm = useCallback<Confirm>(async (o) => (await choose({ title: o.title, body: o.body, options: [{ id: "ok", label: o.ok, kind: o.danger ? "danger" : "primary" }] })) === "ok", [choose]);
   useEffect(() => { const h = (e: Event) => toast(String((e as CustomEvent).detail)); window.addEventListener("dd-toast", h); return () => window.removeEventListener("dd-toast", h); }, [toast]);
-  const okRef = useRef<HTMLButtonElement>(null);
+  const focusRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (!dlg) return; okRef.current?.focus();
-    const k = (e: KeyboardEvent) => { if (e.key === "Escape") { dlg.resolve(false); setDlg(null); } };
+    if (!dlg) return; focusRef.current?.focus();
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") { dlg.resolve(null); setDlg(null); } };
     document.addEventListener("keydown", k); return () => document.removeEventListener("keydown", k);
   }, [dlg]);
-  const done = (v: boolean) => { dlg?.resolve(v); setDlg(null); };
+  const done = (v: string | null) => { dlg?.resolve(v); setDlg(null); };
+  // Focus the primary (or danger) choice, else the last one.
+  const focusIdx = dlg ? Math.max(0, dlg.options.findIndex((x) => x.kind === "primary") >= 0 ? dlg.options.findIndex((x) => x.kind === "primary") : dlg.options.length - 1) : 0;
   return (
-    <Ctx.Provider value={{ toast, confirm }}>
+    <Ctx.Provider value={{ toast, confirm, choose }}>
       {children}
       {msg && <div className="toast" role="status">{msg}</div>}
       {dlg && (
-        <div className="modal-bg" onClick={(e) => { if (e.target === e.currentTarget) done(false); }}>
+        <div className="modal-bg" onClick={(e) => { if (e.target === e.currentTarget) done(null); }}>
           <div className="modal" role="dialog" aria-modal="true" aria-labelledby="dlg-t">
             <h3 id="dlg-t">{dlg.title}</h3>
             {dlg.body && <p>{dlg.body}</p>}
             <div className="acts">
-              <button type="button" className="btn" onClick={() => done(false)}>Cancel</button>
-              <button type="button" ref={okRef} className={"btn " + (dlg.danger ? "danger-solid" : "primary")} onClick={() => done(true)}>{dlg.ok}</button>
+              <button type="button" className="btn" onClick={() => done(null)}>Cancel</button>
+              {dlg.options.map((o, i) => (
+                <button key={o.id} type="button" ref={i === focusIdx ? focusRef : undefined}
+                  className={"btn" + (o.kind === "primary" ? " primary" : o.kind === "danger" ? " danger-solid" : "")} onClick={() => done(o.id)}>{o.label}</button>
+              ))}
             </div>
           </div>
         </div>

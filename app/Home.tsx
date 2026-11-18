@@ -104,7 +104,7 @@ const Arrow = () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none" 
 const Plus = () => <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="M8 3v10M3 8h10" strokeLinecap="round" /></svg>;
 
 function Preview() {
-  const box = (bc: string, bg: string, r = "8px") => ({ padding: "8px 12px", border: `1.5px solid ${bc}`, borderRadius: r, background: bg, fontFamily: "var(--mono)", fontSize: 13 });
+  const box = (bc: string, bg: string, r = "8px") => ({ padding: "8px 12px", border: `1.5px solid ${bc}`, borderRadius: r, background: bg, fontFamily: "var(--mono)", fontSize: 13, whiteSpace: "nowrap" as const });
   return (
     <div className="hero-r" role="img" aria-label="Preview of an interview: the interviewer's prompt on a sticky note, a sketch of client, API, cache and database, and your reply">
       <div style={{ position: "absolute", top: 18, right: 18, display: "flex", alignItems: "center", gap: 10, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10, padding: "8px 12px" }}>
@@ -125,11 +125,11 @@ function Preview() {
           <span style={{ ...box("var(--ink)", "var(--surface)", "8px 8px 14px 14px"), padding: "6px 12px" }}>KV store</span>
         </span>
       </div>
-      <div style={{ position: "absolute", bottom: 24, right: 26, width: 250, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "12px 4px 12px 12px", padding: "12px 14px", transform: "rotate(1.5deg)", boxShadow: "0 8px 20px rgba(27,36,54,0.08)" }}>
+      <div style={{ position: "absolute", bottom: 66, right: 26, width: 250, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "12px 4px 12px 12px", padding: "12px 14px", transform: "rotate(1.5deg)", boxShadow: "0 8px 20px rgba(27,36,54,0.08)" }}>
         <div className="muted" style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>You</div>
         <div style={{ fontSize: 15, lineHeight: 1.45 }}>First: who creates links, and how many a day?</div>
       </div>
-      <div className="muted" style={{ position: "absolute", top: 24, left: 26, fontSize: 13, border: "1px dashed var(--faint)", borderRadius: 999, padding: "3px 10px", background: "var(--surface)" }}>Moved to high-level design</div>
+      <div className="muted" style={{ position: "absolute", bottom: 24, left: 26, fontSize: 13, border: "1px dashed var(--faint)", borderRadius: 999, padding: "3px 10px", background: "var(--surface)" }}>Moved to high-level design</div>
     </div>
   );
 }

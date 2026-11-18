@@ -5,11 +5,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Whiteboard from "@/components/Whiteboard";
 import { Header, Markdown, Thinking, fmtDate, md, useUI } from "@/components/ui";
 import { COMP, verdictTone } from "@/lib/constants";
-import { errCopy, postJSON, postStream, promptSession } from "@/lib/api";
+import { ApiError, errCopy, postJSON, postStream, promptSession } from "@/lib/api";
 import { elapsedMin, store, useMounted, useSettings } from "@/lib/store";
 import { openDiagram } from "@/lib/diagrams";
 import { solutionHTML, solutionMD } from "@/lib/solutionHtml";
 import type { Debrief, Session } from "@/lib/types";
+import { normalizeDebrief } from "@/lib/normalize";
 
 type Tab = "debrief" | "solution" | "interview";
 
@@ -35,6 +36,7 @@ export default function SessionPage() {
     const cur = store.get(id);
     if (!cur) { setMissing(true); return; }
     if (cur.status === "interview" || cur.status === "starting") { router.replace("/room"); return; }
+    if (cur.debrief) cur.debrief = normalizeDebrief(cur.debrief);
     setS(cur); if (cur.status === "solution" && cur.debrief) setTab(cur.solution.model ? "solution" : "debrief");
   }, [mounted, id, router]);
 
@@ -63,7 +65,9 @@ export default function SessionPage() {
   const runDebrief = useCallback(async () => {
     if (running.current.debrief || !sRef.current) return; running.current.debrief = true; setDErr(null);
     try {
-      const { debrief } = await postJSON<{ debrief: Debrief }>("/api/debrief", { session: promptSession(sRef.current) });
+      const res = await postJSON<{ debrief: Debrief }>("/api/debrief", { session: promptSession(sRef.current) });
+      const debrief = normalizeDebrief(res.debrief);
+      if (!debrief) throw new ApiError("invalid_json");
       const auto = store.settings().autoSolution;
       const next: Session = { ...sRef.current, debrief, status: auto ? "solution" : sRef.current.status };
       save((x) => ({ ...x, debrief, status: next.status }));
@@ -177,7 +181,7 @@ function DebriefView({ s, onSolution, solutionReady, onNew }: { s: Session; onSo
             {(d.missed?.nice_to_have || []).map((m, i) => <li key={"n" + i}><span className="pill nice">Nice to have</span> {m}</li>)}
           </ul></div>
         <div className="card"><h3>Moments that mattered</h3>
-          <ul className="flags">{(d.moments || []).map((m, i) => <li key={i} className={m.type === "good" ? "good" : "bad"}>{m.text}</li>)}</ul>
+          <ul className="flags">{(d.moments || []).map((m, i) => <li key={i} className={m.type}>{m.text}</li>)}</ul>
           <h3 style={{ marginTop: 14 }}>Time management</h3><p>{d.time_management}</p></div>
         <div className="card"><h3>Practise next</h3><ol>{(d.top3 || []).map((t, i) => <li key={i}>{t}</li>)}</ol></div>
       </div>

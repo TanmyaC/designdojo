@@ -2,6 +2,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { Board, CustomQuestion, Session, Settings } from "./types";
 import { COMP } from "./constants";
+import { normalizeDebrief } from "./normalize";
 
 /* Everything lives in this browser's localStorage. No accounts. */
 const K = { settings: "dd.settings", sessions: "dd.sessions", current: "dd.current", questions: "dd.questions" };
@@ -79,7 +80,8 @@ export function newSession(p: Pick<Session, "question" | "source" | "level" | "d
 
 /* ---------- derived ---------- */
 export function finishedSessions(all: Record<string, Session>): Session[] {
-  return Object.values(all).filter((s) => s.debrief).sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0));
+  return Object.values(all).filter((s) => s.debrief).map((s) => ({ ...s, debrief: normalizeDebrief(s.debrief) }))
+    .sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0));
 }
 export function rating(s: Session, key: string): number | null {
   const c = (s.debrief?.competencies || []).find((x) => x.key === key);

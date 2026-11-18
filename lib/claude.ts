@@ -56,6 +56,7 @@ function mapError(e: unknown): AppError {
 
 function textOf(msg: Anthropic.Beta.BetaMessage): string {
   if (msg.stop_reason === "refusal") throw new AppError("refused", "Claude declined this request", 422);
+  if (msg.stop_reason === "max_tokens") throw new AppError("truncated", "Reply hit the max_tokens limit before it finished", 502);
   return msg.content.map((b) => (b.type === "text" ? b.text : "")).join("");
 }
 

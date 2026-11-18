@@ -13,6 +13,7 @@ const COPY: Record<string, string> = {
   refused: "Claude declined that message. Rephrase it and try again.",
   image_rejected: "That image couldn't be used. Try a PNG or JPEG under 5 MB.",
   cancelled: "Stopped.",
+  truncated: "Claude's reply was too long and got cut off. Try again.",
   access_code: "This site needs an access code. Ask whoever runs it.",
   network: "Couldn't reach the server. Check your connection and try again.",
 };

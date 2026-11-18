@@ -400,3 +400,4 @@ h2.level{font-size:15px;font-family:var(--body);font-weight:600;color:var(--blue
 .phase-hint{display:flex;gap:8px;align-items:center}.phase-hint .txt{flex:1}
 .phase-hint .hint-btn{border:0;background:var(--surface);color:var(--blue);font-size:13px;font-weight:500;border-radius:7px;padding:5px 9px;cursor:pointer;white-space:nowrap}
 .phase-hint .hint-btn:disabled{opacity:.5;cursor:default}
+.flags li.note::before{background:var(--faint)}

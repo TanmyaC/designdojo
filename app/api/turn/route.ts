@@ -1,6 +1,7 @@
 import { askJSON, handle, AppError, type ImageInput } from "@/lib/claude";
 import { turnPrompt } from "@/lib/prompts";
 import type { PromptSession } from "@/lib/types";
+import { list, txt } from "@/lib/normalize";
 
 export const maxDuration = 300;
 
@@ -27,7 +28,12 @@ export async function POST(req: Request) {
       else throw e;
       if (!r) throw e;
     }
-    if (!r || typeof r.reply !== "string" || !r.reply.trim()) throw new AppError("invalid_json", "Empty reply", 502);
-    return Response.json(r);
+    const reply = txt(r?.reply).trim();
+    if (!r || !reply) throw new AppError("invalid_json", "Empty reply", 502);
+    const bc = r.board_comment && typeof r.board_comment === "object" ? r.board_comment : undefined;
+    return Response.json({
+      reply, new_facts: list(r.new_facts), probed: list(r.probed), phase: txt(r.phase), diagram_notes: txt(r.diagram_notes),
+      board_comment: bc ? { node_id: txt(bc.node_id), text: txt(bc.text) } : undefined,
+    });
   });
 }

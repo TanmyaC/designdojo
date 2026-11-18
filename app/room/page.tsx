@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Whiteboard from "@/components/Whiteboard";
+import { useVoice } from "@/components/useVoice";
 import { Brand, Markdown, Thinking, fmtClock, useUI } from "@/components/ui";
 import { COMP, PHASES, phaseBudget } from "@/lib/constants";
 import { ApiError, errCopy, postJSON, promptSession } from "@/lib/api";
@@ -23,11 +24,17 @@ export default function Room() {
   const [withBoard, setWithBoard] = useState(true);
   const [img, setImg] = useState<Img | null>(null);
   const [now, setNow] = useState(Date.now());
-  const [listening, setListening] = useState(false);
   const logRef = useRef<HTMLDivElement>(null), inputRef = useRef<HTMLTextAreaElement>(null), fileRef = useRef<HTMLInputElement>(null);
   const sRef = useRef<Session | null>(null); sRef.current = s;
-  const recRef = useRef<{ stop: () => void } | null>(null);
   const started = useRef(false);
+  const draftBase = useRef("");                       // what the candidate typed; speech is added after it
+  const join = (a: string, b: string) => [a.trim(), b.trim()].filter(Boolean).join(" ");
+  const sendRef = useRef<(o?: { hint?: boolean; message?: string }) => void>(() => {});
+  const voice = useVoice({
+    settings, transcript: s?.transcript ?? [], interviewing: s?.status === "interview", busy: !!busy, prompt: s?.question || "", toast,
+    onDraft: (heard) => setText(join(draftBase.current, heard)),
+    onTurn: (heard) => sendRef.current({ message: join(draftBase.current, heard) }),
+  });
 
   /* load current session */
   useEffect(() => {
@@ -66,16 +73,16 @@ export default function Room() {
   useEffect(() => { if (s?.status === "starting" && !started.current) { started.current = true; begin(); } }, [s?.status, begin]);
 
   /* one interview turn */
-  async function send(opts: { hint?: boolean } = {}) {
+  async function send(opts: { hint?: boolean; message?: string } = {}) {
     const cur = sRef.current; if (!cur || cur.status !== "interview") return;
     if (busy) { toast("Alex is still answering. Your message stays in the box; send it when the reply arrives."); return; }
-    const msgText = text.trim(); const image = opts.hint ? null : img;
+    const msgText = (opts.message ?? text).trim(); const image = opts.hint ? null : img;
     if (!opts.hint && !msgText && !image) return;
     setTurnErr(null);
     const mine: Turn = opts.hint ? { who: "event", text: "Candidate asked for a hint", at: Date.now() } : { who: "me", text: msgText || "(diagram attached)", at: Date.now() };
     const before = cur;
     const draft: Session = { ...cur, hints: cur.hints + (opts.hint ? 1 : 0), transcript: [...cur.transcript, mine] };
-    setS(draft); if (!opts.hint) { setText(""); setImg(null); }
+    setS(draft); if (!opts.hint) { setText(""); setImg(null); draftBase.current = ""; voice.sent(); }
     setBusy("Alex is thinking…");
     const message = opts.hint ? "[The candidate pressed 'Ask for a hint'. Give the smallest useful nudge as a question, not an answer.]" : (msgText || "(see attached diagram)");
     try {
@@ -102,10 +109,12 @@ export default function Room() {
     } catch (e) {
       // Roll back so nothing is lost; put the message back in the box.
       update((x) => ({ ...x, hints: before.hints, transcript: x.transcript.filter((t) => t !== mine) }));
-      if (!opts.hint) { setText(msgText); if (image) setImg(image); }
+      if (!opts.hint) { setText(msgText); draftBase.current = msgText; if (image) setImg(image); }
       if (!(e instanceof ApiError && e.code === "cancelled")) setTurnErr({ msg: errCopy(e), retry: () => send(opts) });
     } finally { setBusy(null); }
   }
+
+  sendRef.current = send;
 
   async function end() {
     const cur = sRef.current; if (!cur || busy) return;
@@ -125,23 +134,6 @@ export default function Room() {
     const r = new FileReader();
     r.onload = () => { const d = String(r.result); setImg({ media_type: f.type as Img["media_type"], data: d.slice(d.indexOf(",") + 1), name: f.name }); };
     r.readAsDataURL(f);
-  }
-
-  /* dictation via the browser's speech recognition, where available */
-  const SR = typeof window !== "undefined" ? ((window as unknown as Record<string, unknown>).SpeechRecognition || (window as unknown as Record<string, unknown>).webkitSpeechRecognition) as (new () => any) | undefined : undefined; // eslint-disable-line @typescript-eslint/no-explicit-any
-  function toggleMic() {
-    if (listening) { recRef.current?.stop(); return; }
-    if (!SR) return;
-    const rec = new SR(); rec.continuous = true; rec.interimResults = false; rec.lang = navigator.language || "en-US";
-    const base = text ? text.replace(/\s*$/, " ") : "";
-    let said = "";
-    rec.onresult = (e: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => {
-      for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) said += e.results[i][0].transcript;
-      setText(base + said.trim());
-    };
-    rec.onend = () => { setListening(false); recRef.current = null; };
-    rec.onerror = () => { setListening(false); toast("Dictation stopped. Check microphone permission."); };
-    rec.start(); recRef.current = rec; setListening(true);
   }
 
   /* ---------- render ---------- */
@@ -189,6 +181,12 @@ export default function Room() {
           <div className="convo-h">
             <span className="av-lg" aria-hidden="true">A</span>
             <div className="stack" style={{ lineHeight: 1.3 }}><span style={{ fontWeight: 600, fontSize: 15 }}>Alex</span><span className="muted" style={{ fontSize: 12.5 }}>Senior engineer · interviewer · {s.style.toLowerCase()}</span></div>
+            {voice.available && (
+              <button type="button" className={"voice-toggle" + (voice.on ? " on" : "")} aria-pressed={voice.on} onClick={voice.toggle} title={voice.on ? "Turn voice off" : "Turn voice on"}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.5 6v4h2.5l3.5 3V3L5 6z" />{voice.on ? <path d="M11 5.5a3.5 3.5 0 010 5M12.8 3.8a6 6 0 010 8.4" /> : <path d="M11 6l3 4M14 6l-3 4" />}</svg>
+                Voice {voice.on ? "on" : "off"}
+              </button>
+            )}
           </div>
           <div className="log" ref={logRef} aria-live="polite">
             {s.transcript.map((t, i) => t.who === "event" ? <div key={i} className="event">{t.text}</div>
@@ -213,10 +211,11 @@ export default function Room() {
               <button type="button" className="hint-btn" onClick={() => send({ hint: true })} disabled={!!busy}>Ask for a hint</button>
             </div>
           )}
+          {voice.available && voice.on && s.status === "interview" && <VoiceBar voice={voice} endSec={settings.endSilenceSec} />}
           <form className="composer" onSubmit={(e) => { e.preventDefault(); send(); }}>
             <label htmlFor="reply" className="sr-only">Your answer</label>
             <textarea id="reply" ref={inputRef} rows={3} value={text} disabled={s.status !== "interview"} placeholder="Think out loud, like you would in the room."
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => { setText(e.target.value); draftBase.current = e.target.value; if (voice.on) voice.setTyping(true); }}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } }} />
             {img && <span className="attach-pill">{img.name.slice(0, 28)}<button type="button" aria-label="Remove image" onClick={() => setImg(null)}>×</button></span>}
             <div className="composer-a">
@@ -226,9 +225,14 @@ export default function Room() {
               <button type="button" className="icon-btn" aria-label="Attach a diagram image" title="Attach a diagram image" onClick={() => fileRef.current?.click()} disabled={s.status !== "interview"}>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M13.5 7.5l-5.6 5.6a3.5 3.5 0 01-5-5L8.6 2.4a2.3 2.3 0 013.3 3.3L6.3 11.3a1.2 1.2 0 01-1.6-1.6L10 4.4" /></svg>
               </button>
-              {SR && <button type="button" className={"icon-btn" + (listening ? " rec" : "")} aria-label={listening ? "Stop dictation" : "Dictate"} aria-pressed={listening} title={listening ? "Stop dictation" : "Dictate"} onClick={toggleMic} disabled={s.status !== "interview"}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="5.5" y="1.5" width="5" height="8" rx="2.5" /><path d="M3 7.5a5 5 0 0010 0M8 12.5V15" strokeLinecap="round" /></svg>
-              </button>}
+              {voice.available && voice.on && (() => {
+                const live = voice.mode === "listening" || voice.mode === "hearing" || voice.mode === "transcribing";
+                return <button type="button" className={"mic-btn" + (live ? " live" : "") + (voice.mode === "hearing" ? " hearing" : "")} aria-pressed={live}
+                  aria-label={live ? "Pause the microphone" : "Start talking"} title={live ? "Pause the microphone" : "Start talking"} onClick={voice.toggleMic}
+                  disabled={s.status !== "interview" || voice.mode === "alex" || voice.mode === "thinking"}>
+                  <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="5.5" y="1.5" width="5" height="8" rx="2.5" /><path d="M3 7.5a5 5 0 0010 0M8 12.5V15" strokeLinecap="round" /></svg>
+                </button>;
+              })()}
               <button type="submit" className="btn primary sm" style={{ minHeight: 40 }} disabled={!!busy || s.status !== "interview" || (!text.trim() && !img)}>Send</button>
             </div>
           </form>
@@ -236,4 +240,23 @@ export default function Room() {
       </div>
     </div>
   );
+}
+
+/* One line that always says what voice is doing, with the action that fits. */
+function VoiceBar({ voice, endSec }: { voice: ReturnType<typeof useVoice>; endSec: number }) {
+  const m = voice.mode;
+  const line: Record<string, [string, React.ReactNode?]> = {
+    starting: ["Getting voice ready…"],
+    "needs-click": ["Your browser paused sound for this page.", <button key="u" type="button" className="btn sm primary" onClick={voice.unlock}>Turn on Alex&apos;s voice</button>],
+    alex: ["Alex is speaking…", <button key="s" type="button" className="btn sm" onClick={voice.skip}>Skip</button>],
+    thinking: ["Alex is thinking…"],
+    listening: [voice.typing ? "Listening. Auto-send is paused while you type: press Send when ready." : `Listening… your answer sends after ${endSec} s of silence.`],
+    hearing: ["Hearing you…"],
+    transcribing: [voice.typing ? "Transcribing into your draft…" : `Transcribing… keep going, or pause ${endSec} s to send.`],
+    paused: ["Microphone paused. Tap the mic to talk, or type."],
+    "mic-blocked": ["The microphone is blocked. Allow it in your browser's site settings to talk, or type your answers."],
+  };
+  const [msg, action] = line[m] || [""];
+  if (!msg) return null;
+  return <div className={"voice-bar m-" + m} role="status" aria-live="polite"><span className="vb-dot" aria-hidden="true" /><span className="txt">{msg}</span>{action}</div>;
 }

@@ -9,10 +9,12 @@
     "lint": "tsc --noEmit",
     "questions:check": "node scripts/check-questions.mjs",
     "question:new": "node scripts/new-question.mjs",
-    "prebuild": "node scripts/check-questions.mjs"
+    "prebuild": "node scripts/check-questions.mjs",
+    "postinstall": "node scripts/copy-vad-assets.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
+    "@ricky0123/vad-web": "^0.0.31",
     "dompurify": "^3.4.17",
     "marked": "^18.2.0",
     "next": "^16.4.6",

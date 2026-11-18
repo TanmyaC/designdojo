@@ -11,6 +11,7 @@ const EVT = "dd-store";
 export const DEFAULT_SETTINGS: Settings = {
   level: "Senior", duration: 50, style: "Neutral", rubric: "default",
   warnOverrun: true, autoTargetWeakest: true, autoSolution: true, quoteEvidence: true, theme: "System",
+  voice: true, voiceName: "", voiceSpeed: 1, endSilenceSec: 3,
 };
 
 function read<T>(key: string, fallback: T): T {

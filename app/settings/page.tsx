@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Header, useUI } from "@/components/ui";
 import { DEFAULT_SETTINGS, store, useCustomQuestions, useMounted } from "@/lib/store";
+import { Speaker, speechStatus, type SpeechStatus } from "@/lib/voice";
 import type { Level, Rubric, Settings as S, Style } from "@/lib/types";
 
 const STYLES: { label: Style; mark: string; desc: string; badge: string }[] = [
@@ -17,6 +18,18 @@ export default function Settings() {
   const [showQ, setShowQ] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   useEffect(() => { if (mounted) setS(store.settings()); }, [mounted]);
+  const [speech, setSpeech] = useState<SpeechStatus | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const previewer = useRef<Speaker | null>(null);
+  useEffect(() => { speechStatus(true).then(setSpeech); return () => previewer.current?.destroy(); }, []);
+  async function preview() {
+    if (!previewer.current) previewer.current = new Speaker();
+    if (previewing) { previewer.current.stop(); return; }
+    setPreviewing(true);
+    try { await previewer.current.unlock(); await previewer.current.speak("Let's design a URL shortener. Where would you like to start?", { voice: s.voiceName || undefined, speed: s.voiceSpeed }); }
+    catch { toast("Couldn't reach the speech server."); }
+    finally { setPreviewing(false); }
+  }
   const set = (p: Partial<S>) => { setS((x) => ({ ...x, ...p })); setSaved(false); };
 
   function save() { store.saveSettings(s); setSaved(true); }
@@ -80,6 +93,32 @@ export default function Settings() {
             <select id="rubric" className="select" value={s.rubric} onChange={(e) => set({ rubric: e.target.value as Rubric })}>
               <option value="default">Four competencies (default)</option><option value="bigtech">Big-tech loop</option><option value="startup">Startup generalist</option>
             </select></div>
+        </section>
+
+        <section aria-labelledby="sv" className="card stack" style={{ gap: 14, padding: 22 }}>
+          <h2 id="sv" style={{ fontSize: 20 }}>Voice</h2>
+          {speech && !speech.enabled ? (
+            <p className="muted" style={{ margin: 0, fontSize: 14.5 }}>
+              {speech.reason === "not_configured" ? "Voice needs the speech server, which isn't set up for this site yet." : "The speech server isn't reachable right now, so interviews use text."}{" "}
+              To run it, see <code>speech-server/README.md</code> in the repository and set <code>SPEECH_URL</code>.
+            </p>
+          ) : null}
+          <label className="check"><input type="checkbox" checked={s.voice} onChange={(e) => set({ voice: e.target.checked })} /><span>Speak with Alex: hear the replies and answer out loud</span></label>
+          <div className="stack" style={{ gap: 16, opacity: s.voice ? 1 : 0.55 }}>
+            <div className="field" style={{ maxWidth: 460 }}><label htmlFor="vname">Alex&apos;s voice</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <select id="vname" className="select" style={{ flex: 1 }} value={s.voiceName} disabled={!speech?.enabled} onChange={(e) => set({ voiceName: e.target.value })}>
+                  <option value="">{speech?.defaultVoice ? `Default: ${speech.voices.find((v) => v.id === speech.defaultVoice)?.label || speech.defaultVoice}` : "Default"}</option>
+                  {(speech?.voices || []).map((v) => <option key={v.id} value={v.id}>{v.label}</option>)}
+                </select>
+                <button type="button" className="btn" onClick={preview} disabled={!speech?.enabled}>{previewing ? "Stop" : "Hear Alex"}</button>
+              </div></div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+            <fieldset><legend className="lab" style={{ marginBottom: 6 }}>Speaking speed</legend>{seg<number>([0.9, 1, 1.15], s.voiceSpeed, (x) => set({ voiceSpeed: x }), (x) => (x === 1 ? "Normal" : x < 1 ? "Slower" : "Faster"))}</fieldset>
+            <fieldset><legend className="lab" style={{ marginBottom: 6 }}>Send my answer after a pause of</legend>{seg<number>([2, 3, 5], s.endSilenceSec, (x) => set({ endSilenceSec: x as 2 | 3 | 5 }), (x) => `${x} s`)}</fieldset>
+            </div>
+          </div>
+          <p className="small muted" style={{ margin: 0 }}>Audio goes only to this site&apos;s own speech server and is never stored; the interview keeps the text, as with typed answers.</p>
         </section>
 
         <section aria-labelledby="s3" className="card stack" style={{ gap: 12, padding: 22 }}>

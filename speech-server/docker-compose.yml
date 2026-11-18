@@ -1,0 +1,16 @@
+# Run:  SPEECH_API_KEY=some-long-random-string docker compose up -d
+services:
+  speech:
+    build: .
+    image: designdojo-speech
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8001:8001"   # only reachable from this machine; see README for remote setups
+    environment:
+      SPEECH_API_KEY: ${SPEECH_API_KEY:?Set SPEECH_API_KEY}
+      WHISPER_MODEL: ${WHISPER_MODEL:-small.en}
+      KOKORO_DEFAULT_VOICE: ${KOKORO_DEFAULT_VOICE:-af_heart}
+    volumes:
+      - models:/models
+volumes:
+  models:

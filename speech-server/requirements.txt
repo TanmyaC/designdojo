@@ -1,0 +1,14 @@
+# Versions tested together. Install CPU-only PyTorch first (the Dockerfile does this):
+#   pip install --index-url https://download.pytorch.org/whl/cpu torch==2.15.0
+fastapi==0.164.0
+uvicorn[standard]==0.54.0
+python-multipart==0.0.34
+faster-whisper==1.2.1
+ctranslate2==4.9.0
+kokoro==0.7.16
+misaki[en]==0.9.4
+soundfile==0.14.0
+scipy==1.17.1
+numpy==1.26.4
+# English language model Kokoro's pronunciation step needs; installed here so the server never pip-installs at startup.
+en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl

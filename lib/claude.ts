@@ -1,5 +1,6 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
+import { checkAccess } from "./server";
 
 export class AppError extends Error {
   constructor(public code: string, message?: string, public status = 500, public raw?: string) { super(message || code); }
@@ -99,8 +100,7 @@ export function streamText(prompt: string, opts: { effort?: Effort; maxTokens?: 
 
 /* Shared request guard: optional access code, JSON body, error mapping. */
 export async function handle(req: Request, fn: (body: any) => Promise<Response>): Promise<Response> { // eslint-disable-line @typescript-eslint/no-explicit-any
-  const code = process.env.ACCESS_CODE;
-  if (code && req.headers.get("x-access-code") !== code) return Response.json({ error: { code: "access_code", message: "Access code required" } }, { status: 401 });
+  const denied = checkAccess(req); if (denied) return denied;
   let body: unknown;
   try { body = await req.json(); } catch { return Response.json({ error: { code: "bad_request", message: "Invalid JSON body" } }, { status: 400 }); }
   try { return await fn(body); }

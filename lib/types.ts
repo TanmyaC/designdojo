@@ -70,6 +70,10 @@ export interface Settings {
   level: Level; duration: number; style: Style; rubric: Rubric;
   warnOverrun: boolean; autoTargetWeakest: boolean; autoSolution: boolean; quoteEvidence: boolean;
   theme: "System" | "Light" | "Dark";
+  voice: boolean;               // spoken interviews (needs a speech server)
+  voiceName: string;            // Kokoro voice id; "" = server default
+  voiceSpeed: number;           // 0.8–1.3
+  endSilenceSec: 2 | 3 | 5;     // pause that sends a spoken answer
 }
 
 export interface CustomQuestion { id: string; title: string; spec: string; topic: string; difficulty: string; createdAt: number }

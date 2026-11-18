@@ -13,6 +13,8 @@ const COPY: Record<string, string> = {
   refused: "Claude declined that message. Rephrase it and try again.",
   image_rejected: "That image couldn't be used. Try a PNG or JPEG under 5 MB.",
   cancelled: "Stopped.",
+  speech_unavailable: "Voice isn't available right now, so the interview switched to text.",
+  speech_input: "That recording couldn't be transcribed. Try again or type your answer.",
   truncated: "Claude's reply was too long and got cut off. Try again.",
   access_code: "This site needs an access code. Ask whoever runs it.",
   network: "Couldn't reach the server. Check your connection and try again.",
@@ -21,6 +23,9 @@ export function errCopy(e: unknown): string {
   const c = e instanceof ApiError ? e.code : "";
   return COPY[c] || "Something went wrong reaching Claude. Try again.";
 }
+
+/** Headers every API call needs (the optional access code). */
+export function authHeaders(): Record<string, string> { return { "x-access-code": accessCode() }; }
 
 function accessCode(): string { try { return localStorage.getItem("dd.accessCode") || ""; } catch { return ""; } }
 function askForCode(): boolean {

@@ -20,7 +20,12 @@ Instead of a key, local testing can also use an `ant auth login` sign-in: the An
 |---|---|---|
 | `ANTHROPIC_API_KEY` | yes, unless signed in with `ant auth login` | Server-side only. Never sent to the browser. A key in the Default workspace is fine. |
 | `CLAUDE_MODEL` | no | Defaults to `claude-sonnet-5-5`. Set `claude-opus-5-5` to use Opus. |
+| `SPEECH_URL`, `SPEECH_API_KEY` | no | Voice interviews: the URL and key of the speech server in [`speech-server/`](speech-server/). Leave unset for text-only. |
 | `ACCESS_CODE` | no | If set, visitors must enter this code before Alex will talk to them. **Recommended for any public deployment**, since every interview spends your API credits. |
+
+## Voice interviews
+
+Alex can speak, and candidates can answer out loud, hands-free: when Alex finishes, the mic opens, and a short pause sends the answer. Speech runs on a small self-hosted server with open-source models: Kokoro for Alex's voice, Whisper for transcription. Run it with Docker, then set `SPEECH_URL` and `SPEECH_API_KEY`. Setup, performance and deployment: [`speech-server/README.md`](speech-server/README.md). Without it, interviews are typed as before.
 
 ## Question catalog
 
@@ -57,6 +62,8 @@ lib/catalog*.{ts,mjs}   Reads and validates the catalog
 lib/prompts.ts          Prompt builders (text in lib/prompt-text.json, ported from the original POC)
 lib/claude.ts           Anthropic SDK client: streaming, JSON parsing, error mapping, refusal fallbacks
 lib/store.ts            localStorage persistence
+lib/voice.ts            Browser voice: plays Alex's speech, detects and transcribes the candidate
+speech-server/          Self-hosted speech service (FastAPI, Kokoro, faster-whisper, Docker)
 ```
 
 The browser keeps all state and sends the relevant part of a session with each request; the server builds the prompt and calls Claude. Nothing is stored server-side.

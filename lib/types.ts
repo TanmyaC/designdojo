@@ -40,6 +40,7 @@ export interface Session {
   id: string;
   question: string;          // what the candidate picked (may be empty for "Let Alex choose")
   source: "library" | "custom" | "auto";
+  questionId?: string;       // catalog id (questions/<id>.md) for library questions
   topic?: string; difficulty?: string;
   customSpec?: string;       // hidden spec text the candidate wrote for a custom question
   level: Level; duration: number;

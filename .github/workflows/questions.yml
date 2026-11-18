@@ -1,0 +1,19 @@
+name: Question catalog
+
+on:
+  push:
+    paths: ["questions/**", "lib/catalog-core.mjs", "scripts/check-questions.mjs", ".github/workflows/questions.yml"]
+  pull_request:
+    paths: ["questions/**", "lib/catalog-core.mjs", "scripts/check-questions.mjs", ".github/workflows/questions.yml"]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run questions:check

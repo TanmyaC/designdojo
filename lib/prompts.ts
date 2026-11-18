@@ -31,9 +31,10 @@ function boardBlock(s: Sess): string {
 function transcriptText(s: Sess): string {
   return s.transcript.map(t=> t.who==="alex"?`Alex (interviewer): ${t.text}` : t.who==="me"?`Candidate: ${t.text}` : `[${t.text}]`).join("\n\n");
 }
-export function specPrompt(s: Sess, question: string): string {
+export function specPrompt(s: Sess, question: string, notes = "", opening = ""): string {
   return `${P.iv_intro}\n\n${APP_NOTE}${extras(s)}\n\n${P.iv_phases}\n\n${P.patterns}\n\nTASK: The interview is starting. Do the SETUP step only.
 Question given by the candidate: ${question?JSON.stringify(question):"(none — pick one from the Pattern Library, prioritising archetypes and weaknesses the history shows they haven't practised)"}
+${notes ? `\nINTERVIEWER'S PRIVATE NOTES FOR THIS QUESTION (from the question catalog, never shown to the candidate). Build your HIDDEN SPEC from them: keep their requirements, crux and curveballs, vary the numbers slightly so sessions differ, and fill any gaps yourself.\n${notes}\n` : ""}${opening ? `\nSUGGESTED OPENING LINE (you may rephrase it slightly): ${JSON.stringify(opening)}\n` : ""}
 Candidate level: ${s.level}. Interview length: ${s.duration} minutes.
 Candidate history (most recent first):\n${s.historyBrief}
 

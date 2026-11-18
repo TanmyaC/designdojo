@@ -22,6 +22,17 @@ Instead of a key, local testing can also use an `ant auth login` sign-in: the An
 | `CLAUDE_MODEL` | no | Defaults to `claude-sonnet-5-5`. Set `claude-opus-5-5` to use Opus. |
 | `ACCESS_CODE` | no | If set, visitors must enter this code before Alex will talk to them. **Recommended for any public deployment**, since every interview spends your API credits. |
 
+## Question catalog
+
+Interview questions live in [`questions/`](questions/), one Markdown file each, written against [`questions/_TEMPLATE.md`](questions/_TEMPLATE.md). To add one:
+
+```bash
+npm run question:new -- "Design a web crawler"   # creates questions/web-crawler.md
+npm run questions:check                           # validates every question
+```
+
+Then commit and push. The hidden spec in each file is read only on the server and sent to Alex; it never reaches the browser. `npm run build` runs the check first, and the **Question catalog** GitHub Action runs it on every push and pull request. Details: [`questions/README.md`](questions/README.md).
+
 ## Deploy
 
 Any Node host works. On Vercel: import the repo, add the environment variables and deploy. API routes set `maxDuration = 300` because the debrief and model solution can take one to three minutes to write.
@@ -41,6 +52,8 @@ app/
   api/solution          Model solution (step "model"), then comparison (step "cmp")
   api/sam               Streams deep dives and follow-up answers
 components/Whiteboard   Boxes, databases, arrows, text, sticky notes, pen, eraser, undo/redo, zoom
+questions/              Question catalog (one Markdown file per question)
+lib/catalog*.{ts,mjs}   Reads and validates the catalog
 lib/prompts.ts          Prompt builders (text in lib/prompt-text.json, ported from the original POC)
 lib/claude.ts           Anthropic SDK client: streaming, JSON parsing, error mapping, refusal fallbacks
 lib/store.ts            localStorage persistence

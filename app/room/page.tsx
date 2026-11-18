@@ -50,7 +50,7 @@ export default function Room() {
     const cur = sRef.current; if (!cur) return;
     setStartErr(null); setBusy("Alex is preparing the interview…");
     try {
-      const { spec } = await postJSON<{ spec: Spec }>("/api/start", { session: promptSession(cur, { board: false }), question: cur.question, customSpec: cur.customSpec });
+      const { spec } = await postJSON<{ spec: Spec }>("/api/start", { session: promptSession(cur, { board: false }), question: cur.question, questionId: cur.questionId, customSpec: cur.customSpec });
       update((x) => ({ ...x, spec, question: x.question || String(spec.question || "System design interview"), status: "interview", startedAt: Date.now(),
         transcript: [{ who: "alex", text: String(spec.opening_line), at: Date.now() }] }));
       setTimeout(() => inputRef.current?.focus(), 50);

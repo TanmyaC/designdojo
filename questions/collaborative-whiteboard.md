@@ -6,6 +6,7 @@ summary: Many people edit one board at once and see each other’s changes in un
 featured: true
 levels: [Senior, Staff]
 tags: [websockets, crdt, presence]
+focus: [distributed, storage]
 ---
 
 ## Opening

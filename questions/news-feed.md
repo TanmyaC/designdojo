@@ -5,6 +5,7 @@ difficulty: Medium
 summary: Rank and serve a personalised feed to hundreds of millions of daily users.
 featured: true
 tags: [fan-out, ranking]
+focus: [distributed, storage]
 ---
 
 ## Opening

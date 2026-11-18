@@ -5,6 +5,7 @@ difficulty: Hard
 summary: Move money between accounts exactly once, with an auditable history.
 levels: [Senior, Staff]
 tags: [idempotency, double-entry]
+focus: [storage, distributed]
 ---
 
 ## Opening

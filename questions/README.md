@@ -22,6 +22,7 @@ Every interview question in Design Dojo is one Markdown file in this folder. The
 |---|---|---|
 | `title`, `category`, `difficulty`, `summary` | Candidate (question list) | yes |
 | `featured`, `levels`, `tags` | Candidate (home page, filters, search) | no |
+| `focus` | "Let Alex choose" (matches the question to a weak competency) | recommended |
 | `## Opening` | Candidate, as Alex's first message | no |
 | `## Hidden spec` | Alex only, never sent to the browser | recommended |
 
@@ -29,6 +30,6 @@ Inside `## Hidden spec`, use the subsections from the template (Users and core u
 
 Rules the check enforces:
 - `title` starts with "Design" and is at most 80 characters; `summary` is at most 140.
-- `category` and `difficulty` use the allowed values; `levels` only Mid, Senior or Staff.
+- `category` and `difficulty` use the allowed values; `levels` only Mid, Senior or Staff; `focus` only storage, distributed, observability or scoping.
 - File names are lowercase words joined by hyphens, and titles are unique.
 - No placeholder text left from the template (`<system>`, empty bullets).

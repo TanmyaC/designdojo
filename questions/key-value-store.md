@@ -5,6 +5,7 @@ difficulty: Hard
 summary: Replicated, partitioned storage with tunable consistency.
 levels: [Senior, Staff]
 tags: [replication, consistent-hashing]
+focus: [storage, distributed]
 ---
 
 ## Opening

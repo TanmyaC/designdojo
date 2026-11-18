@@ -5,6 +5,7 @@ difficulty: Medium
 summary: Limit requests per API key across regions without a single point of failure.
 featured: true
 tags: [redis, token-bucket]
+focus: [distributed, observability]
 ---
 
 ## Opening

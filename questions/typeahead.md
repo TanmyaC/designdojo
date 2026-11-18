@@ -4,6 +4,7 @@ category: Feeds
 difficulty: Medium
 summary: Suggest completions in under 50 ms as people type, ranked by popularity.
 tags: [trie, caching, latency]
+focus: [storage, scoping]
 ---
 
 ## Opening

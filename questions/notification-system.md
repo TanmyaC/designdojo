@@ -4,6 +4,7 @@ category: Infrastructure
 difficulty: Medium
 summary: Send push, email and SMS at scale with user preferences and retries.
 tags: [queues, retries, push]
+focus: [observability, distributed]
 ---
 
 ## Opening

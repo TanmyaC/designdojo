@@ -4,6 +4,7 @@ category: Storage
 difficulty: Easy
 summary: Create short links, redirect fast, and count clicks at very high read volume.
 tags: [id-generation, caching]
+focus: [storage, scoping]
 ---
 
 ## Opening

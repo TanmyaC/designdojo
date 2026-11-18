@@ -4,6 +4,7 @@ category: Real-time
 difficulty: Medium
 summary: Show who is online and where their cursor is on boards with hundreds of viewers.
 tags: [websockets, pub-sub]
+focus: [distributed, scoping]
 ---
 
 ## Opening

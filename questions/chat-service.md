@@ -4,6 +4,7 @@ category: Real-time
 difficulty: Medium
 summary: One-to-one and group messages with delivery receipts and offline sync.
 tags: [websockets, delivery-receipts]
+focus: [distributed, storage]
 ---
 
 ## Opening

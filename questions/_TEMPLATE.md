@@ -9,6 +9,8 @@ summary: One sentence on what the system does and what makes it hard.   # Max 14
 featured: false                   # true = shown under "Start with a classic" on the home page
 levels: [Mid, Senior, Staff]      # Levels this question suits. Leave out for all three.
 tags: []                          # Free-form keywords for search, e.g. [websockets, crdt]
+focus: []                         # Competencies this question tests hardest, 1–2 of: storage, distributed, observability, scoping.
+                                  # "Let Alex choose" uses it to target the candidate's weakest competency.
 ---
 
 ## Opening

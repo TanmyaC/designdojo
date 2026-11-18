@@ -5,6 +5,7 @@ difficulty: Hard
 summary: Ingest millions of data points per second, roll them up and alert on them.
 levels: [Senior, Staff]
 tags: [time-series, aggregation, alerting]
+focus: [observability, storage]
 ---
 
 ## Opening

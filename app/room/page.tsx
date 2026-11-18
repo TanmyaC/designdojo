@@ -6,7 +6,7 @@ import Whiteboard from "@/components/Whiteboard";
 import { Brand, Markdown, Thinking, fmtClock, useUI } from "@/components/ui";
 import { COMP, PHASES, phaseBudget } from "@/lib/constants";
 import { ApiError, errCopy, postJSON, promptSession } from "@/lib/api";
-import { elapsedMin, store, useMounted, useSettings } from "@/lib/store";
+import { competencyAverages, elapsedMin, finishedSessions, store, useMounted, useSettings } from "@/lib/store";
 import type { Board, Phase, Session, Spec, Turn } from "@/lib/types";
 
 interface TurnReply { reply: string; new_facts?: string[]; probed?: string[]; phase?: string; diagram_notes?: string; board_comment?: { node_id?: string; text?: string } }
@@ -50,8 +50,14 @@ export default function Room() {
     const cur = sRef.current; if (!cur) return;
     setStartErr(null); setBusy("Alex is preparing the interview…");
     try {
-      const { spec } = await postJSON<{ spec: Spec }>("/api/start", { session: promptSession(cur, { board: false }), question: cur.question, questionId: cur.questionId, customSpec: cur.customSpec });
-      update((x) => ({ ...x, spec, question: x.question || String(spec.question || "System design interview"), status: "interview", startedAt: Date.now(),
+      // For "Let Alex choose", tell the server what to target: the weakest competency and recently practised questions.
+      const done = finishedSessions(store.sessions());
+      const weakest = competencyAverages(done).filter((c) => c.avg !== null).sort((a, b) => (a.avg ?? 0) - (b.avg ?? 0))[0]?.key || null;
+      const recent = done.map((d) => d.questionId).filter((id): id is string => !!id);
+      const r = await postJSON<{ spec: Spec; question?: string; questionId?: string }>("/api/start",
+        { session: promptSession(cur, { board: false }), question: cur.question, questionId: cur.questionId, customSpec: cur.customSpec, pick: { weakest, recent } });
+      const spec = r.spec;
+      update((x) => ({ ...x, spec, questionId: x.questionId || r.questionId, question: x.question || r.question || String(spec.question || "System design interview"), status: "interview", startedAt: Date.now(),
         transcript: [{ who: "alex", text: String(spec.opening_line), at: Date.now() }] }));
       setTimeout(() => inputRef.current?.focus(), 50);
     } catch (e) { setStartErr(errCopy(e)); }

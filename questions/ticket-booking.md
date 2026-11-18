@@ -4,6 +4,7 @@ category: Payments
 difficulty: Hard
 summary: Sell seats for a hot concert on-sale without double-booking anyone.
 tags: [reservations, flash-sale]
+focus: [storage, scoping]
 ---
 
 ## Opening

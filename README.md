@@ -12,11 +12,13 @@ cp .env.example .env.local   # then set ANTHROPIC_API_KEY
 npm run dev                  # http://localhost:3000
 ```
 
+Instead of a key, local testing can also use an `ant auth login` sign-in: the Anthropic SDK picks the profile up automatically when `ANTHROPIC_API_KEY` is not set. A deployed site needs a key.
+
 ## Environment
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | yes | Server-side only. Never sent to the browser. |
+| `ANTHROPIC_API_KEY` | yes, unless signed in with `ant auth login` | Server-side only. Never sent to the browser. A key in the Default workspace is fine. |
 | `CLAUDE_MODEL` | no | Defaults to `claude-sonnet-5-5`. Set `claude-opus-5-5` to use Opus. |
 | `ACCESS_CODE` | no | If set, visitors must enter this code before Alex will talk to them. **Recommended for any public deployment**, since every interview spends your API credits. |
 

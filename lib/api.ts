@@ -7,7 +7,7 @@ export class ApiError extends Error { constructor(public code: string, message?:
 
 const COPY: Record<string, string> = {
   rate_limited: "Too many requests right now. Wait a moment, then try again.",
-  server_key: "The server isn't set up to reach Claude yet (missing or invalid API key).",
+  server_key: "The server isn't set up to reach Claude yet: no valid API key or `ant` sign-in. See the terminal running the app.",
   prompt_too_large: "The interview got too long to send in one go. End the interview to get your debrief.",
   invalid_json: "Claude's reply came back in the wrong shape. Try again.",
   refused: "Claude declined that message. Rephrase it and try again.",

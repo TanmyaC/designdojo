@@ -75,11 +75,11 @@ export default function History() {
           <section aria-labelledby="sess" className="stack" style={{ gap: 14 }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-end" }}>
               <h2 id="sess" className="h2" style={{ fontSize: 26 }}>All sessions</h2>
-              <div style={{ marginLeft: "auto", display: "flex", flexWrap: "wrap", gap: 8 }}>
-                <label className="field small muted" style={{ fontWeight: 600, gap: 4 }}>Verdict
-                  <select className="select" style={{ minHeight: 40, background: "var(--surface)" }} value={verdict} onChange={(e) => setVerdict(e.target.value)}><option>All verdicts</option>{VERDICTS.map((v) => <option key={v}>{v}</option>)}</select></label>
-                <label className="field small muted" style={{ fontWeight: 600, gap: 4 }}>Sort
-                  <select className="select" style={{ minHeight: 40, background: "var(--surface)" }} value={sort} onChange={(e) => setSort(e.target.value)}><option>Newest first</option><option>Oldest first</option></select></label>
+              <div className="filters">
+                <div className="field"><label htmlFor="f-verdict">Verdict</label>
+                  <select id="f-verdict" className="select on-surface" value={verdict} onChange={(e) => setVerdict(e.target.value)}><option>All verdicts</option>{VERDICTS.map((v) => <option key={v}>{v}</option>)}</select></div>
+                <div className="field"><label htmlFor="f-sort">Sort</label>
+                  <select id="f-sort" className="select on-surface" value={sort} onChange={(e) => setSort(e.target.value)}><option>Newest first</option><option>Oldest first</option></select></div>
               </div>
             </div>
             <div className="card" style={{ padding: 0, overflowX: "auto" }}>

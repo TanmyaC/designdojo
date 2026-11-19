@@ -15,8 +15,8 @@ export async function POST(req: Request) {
       : getQuestion(b.questionId);
     const q = cq ? cq.title : String(b.question || "").slice(0, 2000);
     const notes = cq ? cq.hiddenSpec : String(b.customSpec || "").slice(0, 4000);
-    const spec = await askJSON<Spec>(specPrompt(b.session, q, notes, cq?.opening || ""), { effort: "medium", signal: req.signal });
+    const { data: spec, usage } = await askJSON<Spec>(specPrompt(b.session, q, notes, cq?.opening || ""), { effort: "medium", signal: req.signal, meta: { route: "start", sessionId: b.session.id } });
     if (!spec || typeof spec.opening_line !== "string") throw new AppError("invalid_json", "No opening line", 502);
-    return Response.json({ spec, question: cq?.title, questionId: cq?.id });
+    return Response.json({ spec, question: cq?.title, questionId: cq?.id, usage });
   });
 }

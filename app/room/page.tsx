@@ -9,8 +9,9 @@ import { COMP, PHASES, phaseBudget } from "@/lib/constants";
 import { ApiError, errCopy, postJSON, promptSession } from "@/lib/api";
 import { competencyAverages, elapsedMin, finishedSessions, store, useMounted, useSettings } from "@/lib/store";
 import type { Board, Phase, Session, Spec, Turn } from "@/lib/types";
+import { addUsage, type UsageSummary } from "@/lib/usage-shared";
 
-interface TurnReply { reply: string; new_facts?: string[]; probed?: string[]; phase?: string; diagram_notes?: string; board_comment?: { node_id?: string; text?: string } }
+interface TurnReply { usage?: UsageSummary; reply: string; new_facts?: string[]; probed?: string[]; phase?: string; diagram_notes?: string; board_comment?: { node_id?: string; text?: string } }
 type Img = { media_type: "image/png" | "image/jpeg" | "image/gif" | "image/webp"; data: string; name: string };
 
 export default function Room() {
@@ -61,10 +62,10 @@ export default function Room() {
       const done = finishedSessions(store.sessions());
       const weakest = competencyAverages(done).filter((c) => c.avg !== null).sort((a, b) => (a.avg ?? 0) - (b.avg ?? 0))[0]?.key || null;
       const recent = done.map((d) => d.questionId).filter((id): id is string => !!id);
-      const r = await postJSON<{ spec: Spec; question?: string; questionId?: string }>("/api/start",
+      const r = await postJSON<{ spec: Spec; question?: string; questionId?: string; usage?: UsageSummary }>("/api/start",
         { session: promptSession(cur, { board: false }), question: cur.question, questionId: cur.questionId, customSpec: cur.customSpec, pick: { weakest, recent } });
       const spec = r.spec;
-      update((x) => ({ ...x, spec, questionId: x.questionId || r.questionId, question: x.question || r.question || String(spec.question || "System design interview"), status: "interview", startedAt: Date.now(),
+      update((x) => ({ ...x, usage: addUsage(x.usage, r.usage), spec, questionId: x.questionId || r.questionId, question: x.question || r.question || String(spec.question || "System design interview"), status: "interview", startedAt: Date.now(),
         transcript: [{ who: "alex", text: String(spec.opening_line), at: Date.now() }] }));
       setTimeout(() => inputRef.current?.focus(), 50);
     } catch (e) { setStartErr(errCopy(e)); }
@@ -104,7 +105,7 @@ export default function Room() {
         if (withBoard && bc?.node_id && bc.text && x.board.nodes.some((n) => n.id === bc.node_id)) {
           board = { ...x.board, comments: [...x.board.comments.filter((c) => c.nodeId !== bc.node_id), { nodeId: bc.node_id, text: bc.text, at: Date.now() }] };
         }
-        return { ...x, transcript: t, facts, probed, phase, board };
+        return { ...x, transcript: t, facts, probed, phase, board, usage: addUsage(x.usage, r.usage) };
       });
     } catch (e) {
       // Roll back so nothing is lost; put the message back in the box.

@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import { Bars, Header, fmtDate, useUI } from "@/components/ui";
 import { COMP, VERDICTS, verdictTone } from "@/lib/constants";
 import { competencyAverages, elapsedMin, finishedSessions, rating, store, useMounted, useSessions } from "@/lib/store";
+import { fmtUsage } from "@/lib/usage-shared";
 
 export default function History() {
   const mounted = useMounted(); const sessions = useSessions(); const { confirm, toast } = useUI();
@@ -84,7 +85,7 @@ export default function History() {
             </div>
             <div className="card" style={{ padding: 0, overflowX: "auto" }}>
               <table className="htable">
-                <thead><tr><th scope="col">Date</th><th scope="col">Question</th><th scope="col">Level</th><th scope="col">Scope · Design · Depth · Comms</th><th scope="col">Verdict</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
+                <thead><tr><th scope="col">Date</th><th scope="col">Question</th><th scope="col">Level</th><th scope="col">Scope · Design · Depth · Comms</th><th scope="col">Verdict</th><th scope="col" title="Estimated Claude API cost, from list prices, and the share of input read from the prompt cache">Cost (est.)</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
                 <tbody>
                   {rows.map((s) => {
                     const sc = [rating(s, "storage"), rating(s, "distributed"), rating(s, "observability"), rating(s, "scoping")];
@@ -95,6 +96,7 @@ export default function History() {
                         <td>{s.level}</td>
                         <td><div style={{ display: "flex", gap: 4 }} aria-label={COMP.map((c, i) => `${c.short} ${sc[i] ?? "not rated"}`).join(", ")}>{sc.map((v, i) => <span key={i} className={"score s" + (v ?? 0)} title={COMP[i].name}>{v ?? "–"}</span>)}</div></td>
                         <td><span className={"vchip v-" + verdictTone(s.debrief?.verdict)}>{s.debrief?.verdict}</span></td>
+                        <td className="small muted" style={{ whiteSpace: "nowrap" }}>{fmtUsage(s.usage)}</td>
                         <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                           <Link href={`/session/${s.id}`} style={{ display: "inline-flex", alignItems: "center", minHeight: 40, fontWeight: 500, marginRight: 6 }}>View debrief</Link>
                           <button type="button" className="icon-btn danger" aria-label={`Delete interview: ${s.question}`} onClick={() => del(s.id, s.question || String(s.spec?.question || ""))}><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 8.5h5.6l.7-8.5" /></svg></button>
@@ -102,7 +104,7 @@ export default function History() {
                       </tr>
                     );
                   })}
-                  {!rows.length && <tr><td colSpan={6} className="muted">No sessions with that verdict.</td></tr>}
+                  {!rows.length && <tr><td colSpan={7} className="muted">No sessions with that verdict.</td></tr>}
                 </tbody>
               </table>
             </div>

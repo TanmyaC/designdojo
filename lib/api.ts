@@ -2,6 +2,7 @@
 import type { PromptSession, Session } from "./types";
 import { boardToText } from "./board";
 import { elapsedMin, historyBrief, store } from "./store";
+import { USAGE_MARKER, type UsageSummary } from "./usage-shared";
 
 export class ApiError extends Error { constructor(public code: string, message?: string) { super(message || code); } }
 
@@ -54,22 +55,36 @@ async function post(path: string, body: unknown, signal?: AbortSignal, retried =
 export async function postJSON<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
   return (await post(path, body, signal)).json() as Promise<T>;
 }
-export async function postStream(path: string, body: unknown, onText: (all: string) => void, signal?: AbortSignal): Promise<string> {
+/* Streams text. The server ends a successful stream with a usage trailer, "[[usage:{...}]]":
+   it is never shown, and is handed to onUsage once the stream is done. */
+export async function postStream(path: string, body: unknown, onText: (all: string) => void, signal?: AbortSignal, onUsage?: (u: UsageSummary) => void): Promise<string> {
   const r = await post(path, body, signal);
   const reader = r.body!.getReader(); const dec = new TextDecoder(); let all = "";
+  // Hide the trailer, including a half-arrived one ("\n[[us") at the end of a chunk.
+  const visible = () => {
+    const i = all.lastIndexOf("\n[[");
+    if (i < 0) return all;
+    const tail = all.slice(i + 1);
+    return tail.startsWith(USAGE_MARKER) || USAGE_MARKER.startsWith(tail) ? all.slice(0, i) : all;
+  };
   for (;;) {
     const { done, value } = await reader.read(); if (done) break;
     all += dec.decode(value, { stream: true });
     const m = all.match(/\[\[error:([a-z_]+)\]\]$/);
     if (m) throw new ApiError(m[1]);
-    onText(all);
+    onText(visible());
   }
-  return all;
+  const i = all.lastIndexOf("\n" + USAGE_MARKER);
+  if (i >= 0 && onUsage) {
+    try { onUsage(JSON.parse(all.slice(i + 1 + USAGE_MARKER.length).replace(/\]\]\s*$/, "")) as UsageSummary); } catch { /* ignore a malformed trailer */ }
+  }
+  return visible();
 }
 
 /* What the server needs from a session to build a prompt. */
 export function promptSession(s: Session, opts: { board?: boolean } = {}): PromptSession {
   return {
+    id: s.id,
     question: s.question || s.spec?.question || "", level: s.level, duration: s.duration,
     spec: s.spec, facts: s.facts, probed: s.probed, phase: s.phase, hints: s.hints,
     elapsedMin: elapsedMin(s), transcript: s.transcript, historyBrief: historyBrief(store.sessions()),

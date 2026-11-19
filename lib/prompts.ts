@@ -1,8 +1,11 @@
 // Prompt builders ported from the original POC (interview-room.html).
 // The prompt text lives in prompt-text.json, copied verbatim from the POC.
 import "server-only";
+import { createHash } from "node:crypto";
+import type Anthropic from "@anthropic-ai/sdk";
 import P from "./prompt-text.json";
 import type { PromptSession as Sess } from "./types";
+import type { ClaudeRequest, ImageInput } from "./claude";
 import { COMP } from "./constants";
 
 export const APP_NOTE = `APP CONTEXT: You are running inside a practice web app, not a chat with slash commands. The candidate uses buttons: "Ask for a hint" and "End interview". The app shows a timer, so the candidate does not send /time; you are told the elapsed minutes on every turn. The rubric and competencies are included below; ignore any mention of Project knowledge files. The candidate often dictates their answers using their device's dictation, so messages may contain transcription errors (e.g. 'cash' for cache, 'Cassandra' misspelt, missing punctuation) and spoken filler. Interpret them charitably by technical context, never penalise transcription errors, and judge the substance. Keep your replies conversational and avoid tables or long lists during the interview. The candidate also has a shared whiteboard; when a message includes a BOARD section, that is the current state of their diagram (boxes, databases, queues, notes and labelled arrows), and you can see it the way an interviewer sees a shared screen.`;
@@ -206,3 +209,127 @@ Answer as Sam in concise Markdown (at most 400 words unless the request needs mo
 }
 
 
+
+/* ====================================================================================
+   Cache-friendly request builders for /api/turn and /api/sam.
+
+   Caching matches on a prefix: a change to any byte invalidates everything after it.
+   So each request is ordered from most stable to least stable:
+     system[0]  fixed text, the same for every interview        breakpoint, 1h TTL
+     system[1]  this session's settings and hidden spec          breakpoint, 1h TTL
+     messages   earlier turns, one block per transcript entry    breakpoint on the last one, 5m TTL
+     last user  everything that changes every turn               never cached
+   1h breakpoints must come before 5m ones. scripts/check-cache-prefix.ts guards all of this.
+   PROMPT_LAYOUT=legacy switches back to the single-string prompts above, for a baseline.
+   ==================================================================================== */
+
+export const CACHED_LAYOUT = process.env.PROMPT_LAYOUT !== "legacy";
+
+type TextBlock = Anthropic.Beta.BetaTextBlockParam;
+type Msg = Anthropic.Beta.BetaMessageParam;
+const H1 = { type: "ephemeral", ttl: "1h" } as const;
+const M5 = { type: "ephemeral", ttl: "5m" } as const;
+const hash = (t: string) => createHash("sha256").update(t).digest("hex").slice(0, 8);
+
+/** JSON with sorted object keys, so the same data always gives the same bytes. */
+export function stableStringify(v: unknown, indent?: number): string {
+  return JSON.stringify(v, (_k, val) => val && typeof val === "object" && !Array.isArray(val)
+    ? Object.fromEntries(Object.keys(val).sort().map((k) => [k, (val as Record<string, unknown>)[k]]))
+    : val, indent);
+}
+
+/* Earlier turns as real messages: consecutive entries with the same role share a message but
+   each keeps its own block, so appending a turn never changes a block that was already sent.
+   The last history block gets the moving 5-minute breakpoint. */
+function history(items: { role: "user" | "assistant"; text: string }[], opener: string): Msg[] {
+  if (!items.length) return [];
+  const out: { role: "user" | "assistant"; content: TextBlock[] }[] = [];
+  if (items[0].role !== "user") out.push({ role: "user", content: [{ type: "text", text: opener }] });
+  for (const it of items) {
+    const block: TextBlock = { type: "text", text: it.text || "(empty)" };
+    const last = out.at(-1);
+    if (last && last.role === it.role) last.content.push(block); else out.push({ role: it.role, content: [block] });
+  }
+  const lastBlock = out.at(-1)?.content.at(-1);
+  if (lastBlock) lastBlock.cache_control = M5;
+  return out;
+}
+
+const TURN_FIXED = `${P.iv_intro}\n\n${APP_NOTE}\n\n${P.iv_rules}\n\n${P.iv_phases}\n\n${P.rubric}\n\n${P.edge}
+
+HOW THIS CONVERSATION IS LAID OUT: the interview so far arrives as messages. Candidate messages and app events (in square brackets) are user turns; your earlier turns as Alex show only the reply text you sent, not the JSON around it. The latest user message carries the current state (canon facts, elapsed time, hints, phase, competencies probed), the candidate's new input and the reply format. Always answer in that format.`;
+
+const TURN_REPLY = `Respond as Alex with your next interviewer turn. Reply with ONLY a JSON object:
+{"reply":"your message to the candidate (short, in character, light markdown allowed)",
+"new_facts":["any NEW facts about the problem you stated in this reply (requirements, numbers, constraints); empty array if none"],
+"probed":["competency keys this reply probes: storage | distributed | observability | scoping"],
+"phase":"scoping | high_level | deep_dive | wrap_up",
+"diagram_notes":"if an image was attached: a factual description of what the diagram shows; otherwise empty string",
+"board_comment":{"node_id":"id of ONE board element your question is about, only if a BOARD was included and pinning a short comment to it helps; otherwise empty string","text":"the comment, max 15 words, or empty string"}}`;
+
+export const TURN_VERSION = "turn-cached-" + hash(TURN_FIXED + TURN_REPLY);
+
+export function turnRequest(s: Sess, msg: string, image?: ImageInput): ClaudeRequest {
+  const session = `${extras(s).trim()}${extras(s) ? "\n\n" : ""}Candidate level: ${s.level}. Interview length: ${s.duration} minutes.
+
+HIDDEN SPEC (private — never reveal or hint at it directly):\n${stableStringify(s.spec)}`;
+  const probed = COMP.filter((c) => s.probed[c.key]).map((c) => c.name);
+  const now = `CURRENT STATE
+CANON FACTS you have already stated (stay consistent with these):\n${s.facts.length ? s.facts.map((f) => "- " + f).join("\n") : "- none yet"}
+Elapsed: ${s.elapsedMin.toFixed(0)} of ${s.duration} minutes. Hints used: ${s.hints}. Current phase: ${s.phase}.
+Competencies probed so far: ${probed.length ? probed.join(", ") : "none"} (make sure all four get probed before the end).
+
+NEW INPUT FROM THE CANDIDATE:\n${msg}${boardBlock(s)}${image ? "\n\n(The candidate attached an image of their diagram with this message. Read it carefully and probe vague or unlabelled parts.)" : ""}
+
+${TURN_REPLY}`;
+  const turns = s.transcript.map((t) => t.who === "alex"
+    ? { role: "assistant" as const, text: t.text }
+    : { role: "user" as const, text: t.who === "me" ? t.text : `[${t.text}]` });
+  const last: Anthropic.Beta.BetaContentBlockParam[] = [];
+  if (image) last.push({ type: "image", source: { type: "base64", media_type: image.media_type, data: image.data } });
+  last.push({ type: "text", text: now });
+  return {
+    system: [{ type: "text", text: TURN_FIXED, cache_control: H1 }, { type: "text", text: session, cache_control: H1 }],
+    messages: [...history(turns, "[The interview starts.]"), { role: "user", content: last }],
+    promptVersion: TURN_VERSION,
+  };
+}
+
+const SAM_FIXED = SA_BASE().replace("- Reply with ONLY the JSON object requested, no other text.", "");
+const SAM_FOLLOW = `You support: deep dives into one topic; a spoken 45-minute rehearsal script with timeboxes and check-in lines; a side-by-side comparison TABLE of the candidate's final design and the model; an 8-question quiz (ask the questions, then grade the answers when the candidate replies).
+
+Earlier messages in this conversation are the candidate's follow-up requests and your answers as Sam.`;
+const SAM_DEEP_ASK = "Write at most 350 words of Markdown at Staff-level depth: the mechanics, the numbers, the failure modes, and one or two sentences on how to say this in the interview. Short paragraphs or bullets; a small table only if it truly helps. No diagrams or diagram code. Stay within the four competencies.";
+const SAM_FOLLOW_ASK = "Answer as Sam in concise Markdown (at most 400 words unless the request needs more, such as a full rehearsal script). No diagrams or diagram code.";
+export const SAM_DEEP_VERSION = "sam-deep-cached-" + hash(SAM_FIXED + SAM_DEEP_ASK);
+export const SAM_FOLLOW_VERSION = "sam-follow-cached-" + hash(SAM_FIXED + SAM_FOLLOW + SAM_FOLLOW_ASK);
+
+function scopeStable(s: Sess): string {
+  return `QUESTION: ${s.question}\nLEVEL: ${s.level}\nAGREED SCOPE (hidden spec revealed in the debrief):\n${stableStringify(s.spec, 1)}\nCLARIFICATIONS AND FACTS STATED IN THE INTERVIEW (canon):\n${s.facts.map((f) => "- " + f).join("\n") || "- none"}`;
+}
+
+export function deepRequest(s: Sess, title: string, extra?: string): ClaudeRequest {
+  return {
+    system: [
+      { type: "text", text: SAM_FIXED, cache_control: H1 },
+      { type: "text", text: scopeStable(s), cache_control: H1 },
+      // The model solution is stored once and never rebuilt, so its own key order is stable.
+      { type: "text", text: `MODEL SOLUTION (JSON):\n${JSON.stringify(s.solution?.model)}`, cache_control: M5 },
+    ],
+    messages: [{ role: "user", content: [{ type: "text", text: `The candidate wants a DEEP DIVE into one part of the model solution.\n\nDEEP DIVE TOPIC: ${title}${extra ? "\n" + extra : ""}\n\n${SAM_DEEP_ASK}` }] }],
+    promptVersion: SAM_DEEP_VERSION,
+  };
+}
+
+export function followRequest(s: Sess, msg: string): ClaudeRequest {
+  const turns = s.followups.map((f) => ({ role: f.who === "me" ? "user" as const : "assistant" as const, text: f.text }));
+  return {
+    system: [
+      { type: "text", text: SAM_FIXED, cache_control: H1 },
+      { type: "text", text: scopeStable(s), cache_control: H1 },
+      { type: "text", text: SAM_FOLLOW },
+    ],
+    messages: [...history(turns, "[Follow-up chat starts.]"), { role: "user", content: [{ type: "text", text: `NEW REQUEST FROM THE CANDIDATE:\n${msg}\n\n${SAM_FOLLOW_ASK}` }] }],
+    promptVersion: SAM_FOLLOW_VERSION,
+  };
+}

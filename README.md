@@ -251,6 +251,8 @@ All settings are server-side environment variables, in `.env.local` locally or i
 | `ACCESS_CODE` | No | Visitors must enter this code before Alex will talk to them. Recommended for any public deployment. |
 | `SPEECH_URL` | No | URL of the speech server, e.g. `http://127.0.0.1:8001`. Leave unset for text-only interviews. |
 | `SPEECH_API_KEY` | With `SPEECH_URL` | The shared secret the speech server was started with. |
+| `LLM_LOG_FILE` | No | Where to write the Claude call log ([Cost](#cost)). Defaults to `logs/llm.jsonl` in development and is off in production unless set. |
+| `PROMPT_LAYOUT` | No | Set to `legacy` to send interview turns and Sam's answers as one uncached prompt, the way the app did before prompt caching. Only useful for measuring a baseline. |
 
 ## Architecture
 
@@ -272,7 +274,7 @@ flowchart LR
     ui --> sp --> speech[("Speech server")]
 ```
 
-The browser holds all state and sends the relevant part of a session with each request; the server builds the prompt and calls Claude. **Nothing is stored server-side.**
+The browser holds all state and sends the relevant part of a session with each request; the server builds the prompt and calls Claude. **Nothing is stored server-side**, apart from the optional call log of token counts and timings described under [Cost](#cost), which holds no interview text.
 
 | Route | Does | Claude effort |
 |---|---|---|
@@ -283,7 +285,7 @@ The browser holds all state and sends the relevant part of a session with each r
 | `POST /api/sam` | Streams deep dives and follow-up answers | medium |
 | `/api/speech/*` | Status, text to speech, speech to text (proxied to the speech server) | — |
 
-Every Claude call streams under the hood, so long generations don't time out. If a safety classifier declines a request, it's retried on a fallback model within the same call. Model replies are normalized before rendering, so an unexpected shape can't break a page.
+Every Claude call streams under the hood, so long generations don't time out. If a safety classifier declines a request, it's retried on a fallback model within the same call. Model replies are normalized before rendering, so an unexpected shape can't break a page. Interview turns and Sam's answers use [prompt caching](#prompt-caching), and every call is logged with its tokens, timing and estimated cost.
 
 ```
 app/                    Pages and API routes
@@ -293,20 +295,49 @@ app/                    Pages and API routes
 components/             Whiteboard, voice hook (useVoice), shared UI
 lib/
   prompts.ts            Prompt builders (text in prompt-text.json)
-  claude.ts             Anthropic SDK client: streaming, JSON parsing, errors, fallbacks
+  claude.ts             Anthropic SDK client: streaming, JSON parsing, errors, fallbacks, call timing
+  usage.ts              Price table, cost per call, the llm_call log (usage-shared.ts: totals for the UI)
   catalog*.{ts,mjs}     Reads and validates the question catalog
   voice.ts              Browser voice: playback, voice detection, transcription
   store.ts              localStorage persistence
 questions/              Question catalog (one Markdown file per question)
 speech-server/          Self-hosted speech service (FastAPI, Kokoro, faster-whisper, Docker)
-scripts/                Catalog check, question scaffold, voice-model asset copy
+scripts/                Catalog check, question scaffold, voice-model asset copy,
+                        cache layout check, call-log report
 ```
 
 ## Cost
 
-Every interview uses your Anthropic API credits. A rough estimate for one 45–60 minute interview, including the debrief and model solution: **about $1 on Sonnet 5.5** and **about $2 on Opus 5.5**. Most of it is the interview turns, which resend Alex's instructions and the growing transcript. Check *Usage* on platform.claude.com after a few runs for real numbers, and set a monthly spend limit while you test. Ending an interview without a debrief spends nothing further.
+Every interview uses your Anthropic API credits. Before prompt caching, a rough estimate for one 45–60 minute interview, including the debrief and model solution, was **about $1 on Sonnet 5.5** and **about $2 on Opus 5.5**, most of it interview turns. With caching the turns should cost much less; measure your own numbers with the tools below. Set a monthly spend limit on platform.claude.com while you test. Ending an interview without a debrief spends nothing further.
 
 Voice adds no API cost; it runs on your own speech server.
+
+### Seeing what an interview costs
+
+- **In the app:** History has a *Cost (est.)* column, and each session page shows the same figure under its title, for example `$0.14 · 92% cached`. The figure adds up every Claude call for that interview: start, turns, debrief, model solution and Sam. It is an estimate from list prices in `lib/usage.ts`; your invoice is the real number. Interviews from before this feature show "—".
+- **Call log:** the server writes one JSON line per Claude call (`"type":"llm_call"`) to its console, and in development to `logs/llm.jsonl`. Each line has the route, session id, turn number, model requested and served, effort, the four token counts, time to first token, total time, outcome (`ok`, `salvaged`, `invalid_json`, `refused`, `truncated`, `rate_limited`, `cancelled` or `error`) and estimated cost. It holds numbers and labels only, never prompt or reply text.
+- **Report:** `npm run llm:report` reads the log and prints cost per interview, cost by route and token type, time to first token on `/api/turn` (p50 and p90), cache hit rate by turn, and outcome counts. It warns about any interview that never read from the cache.
+
+### Prompt caching
+
+Each turn would otherwise resend Alex's ~3.5k tokens of instructions, the hidden spec and the whole transcript at full price. `/api/turn` and `/api/sam` now send their prompt in order of how often each part changes, with cache breakpoints between the parts (`lib/prompts.ts`, `turnRequest`, `deepRequest` and `followRequest`):
+
+| Part | Changes | Cache |
+|---|---|---|
+| Alex's (or Sam's) fixed instructions | never | 1 hour; shared by every interview |
+| Style, level, length and hidden spec (Sam: the agreed scope) | once per interview | 1 hour |
+| Earlier turns, as real user and assistant messages | grows by one exchange per turn | 5 minutes, on the newest turn |
+| Canon facts, time, hints, phase, the new message, the board | every turn | not cached |
+
+A cache read costs 5% of the normal input price on Sonnet 5.5, so from the second turn on, almost all of each turn's input is cheap. The 5-minute entry renews on every turn; after a longer pause only the transcript is written again, because the two 1-hour entries survive.
+
+Caching only works while everything before a breakpoint stays byte-for-byte the same. Keep these rules when you edit a prompt:
+
+- Put anything that changes every turn in the last message, never in the system blocks.
+- Never rewrite or re-trim earlier turns; only append.
+- Keep one model and one effort level per route.
+
+`npm run check:cache` builds two consecutive turns of a sample interview and fails if their cached parts differ, with no API calls. Run it after any prompt change. To measure the saving, run an interview with `PROMPT_LAYOUT=legacy`, run one without it, and compare them with `npm run llm:report`.
 
 ## Deploying
 
@@ -323,6 +354,8 @@ Voice adds no API cost; it runs on your own speech server.
 | `npm run lint` | Type-checks the project (`tsc --noEmit`) |
 | `npm run questions:check` | Validates every file in `questions/` |
 | `npm run question:new -- "Design …"` | Creates a new question from the template |
+| `npm run check:cache` | Checks the cached prompt layouts stay stable from turn to turn (no API calls) |
+| `npm run llm:report` | Summarises the Claude call log: cost, time to first token, cache hit rate, outcomes |
 
 ## Acknowledgements
 

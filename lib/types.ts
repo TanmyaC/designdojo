@@ -1,3 +1,5 @@
+import type { UsageSummary } from "./usage-shared";
+
 export type Level = "Mid" | "Senior" | "Staff";
 export type Phase = "scoping" | "high_level" | "deep_dive" | "wrap_up";
 export type Style = "Supportive" | "Neutral" | "Tough";
@@ -53,10 +55,12 @@ export interface Session {
   debrief: Debrief | null;
   solution: { model: ModelSolution | null; cmp: Comparison | null; deep: Record<string, string> };
   followups: FollowUp[];
+  usage?: UsageSummary;      // estimated Claude cost and tokens, summed over every call for this session
 }
 
 /* What the browser sends the server to build a prompt. */
 export interface PromptSession {
+  id?: string;               // session id, for the server's cost log
   question: string; level: string; duration: number;
   spec: Spec | null; facts: string[]; probed: Record<string, boolean>; phase: string; hints: number;
   elapsedMin: number; transcript: Turn[]; historyBrief: string;

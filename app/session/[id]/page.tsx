@@ -11,6 +11,7 @@ import { openDiagram } from "@/lib/diagrams";
 import { solutionHTML, solutionMD } from "@/lib/solutionHtml";
 import type { Debrief, Session } from "@/lib/types";
 import { normalizeDebrief } from "@/lib/normalize";
+import { addUsage, fmtUsage, type UsageSummary } from "@/lib/usage-shared";
 
 type Tab = "debrief" | "solution" | "interview";
 
@@ -51,9 +52,9 @@ export default function SessionPage() {
         if (work.solution[step]) { st[step] = "done"; setSteps({ ...st }); continue; }
         st[step] = "run"; setSteps({ ...st });
         solCtl.current = new AbortController();
-        const { result } = await postJSON<{ result: unknown }>("/api/solution", { session: promptSession(work), step }, solCtl.current.signal);
+        const { result, usage } = await postJSON<{ result: unknown; usage?: UsageSummary }>("/api/solution", { session: promptSession(work), step }, solCtl.current.signal);
         work = { ...work, solution: { ...work.solution, [step]: result } };
-        save((x) => ({ ...x, solution: { ...x.solution, [step]: result } }));
+        save((x) => ({ ...x, solution: { ...x.solution, [step]: result }, usage: addUsage(x.usage, usage) }));
         st[step] = "done"; setSteps({ ...st });
       }
     } catch (e) {
@@ -65,12 +66,12 @@ export default function SessionPage() {
   const runDebrief = useCallback(async () => {
     if (running.current.debrief || !sRef.current) return; running.current.debrief = true; setDErr(null);
     try {
-      const res = await postJSON<{ debrief: Debrief }>("/api/debrief", { session: promptSession(sRef.current) });
+      const res = await postJSON<{ debrief: Debrief; usage?: UsageSummary }>("/api/debrief", { session: promptSession(sRef.current) });
       const debrief = normalizeDebrief(res.debrief);
       if (!debrief) throw new ApiError("invalid_json");
       const auto = store.settings().autoSolution;
       const next: Session = { ...sRef.current, debrief, status: auto ? "solution" : sRef.current.status };
-      save((x) => ({ ...x, debrief, status: next.status }));
+      save((x) => ({ ...x, debrief, status: next.status, usage: addUsage(x.usage, res.usage) }));
       if (store.currentId() === next.id) store.setCurrent(null);
       if (auto) runSolution(false, next);
     } catch (e) { setDErr(errCopy(e)); }
@@ -99,7 +100,7 @@ export default function SessionPage() {
       <main className="page" style={{ gap: 22 }}>
         <div className="stack" style={{ gap: 8 }}>
           <Link href="/history" style={{ fontSize: 14, fontWeight: 500, textDecoration: "none" }}>← History</Link>
-          <span className="small muted">{fmtDate(s.endedAt || s.createdAt, true)} · {s.level} level · {Math.round(elapsedMin(s))} of {s.duration} minutes · {s.hints} hint{s.hints === 1 ? "" : "s"}</span>
+          <span className="small muted">{fmtDate(s.endedAt || s.createdAt, true)} · {s.level} level · {Math.round(elapsedMin(s))} of {s.duration} minutes · {s.hints} hint{s.hints === 1 ? "" : "s"}{s.usage && <> · <span title="Estimated Claude API cost for this interview, from list prices, and the share of input tokens read from the prompt cache">{fmtUsage(s.usage)} (est.)</span></>}</span>
         </div>
         <div className="session-tabs" role="tablist" aria-label="Interview results">
           <button type="button" role="tab" aria-selected={tab === "debrief"} onClick={() => setTab("debrief")}>Debrief</button>
@@ -228,11 +229,11 @@ function SolutionView({ s, steps, err, busy, onRetry, onStop, onRegen, save, toa
     if (sRef.current.solution.deep[key]) { box.hidden = !box.hidden; return; }
     if (deepBusy) { toast("A deep dive is already being written."); return; }
     setDeepBusy(true); box.hidden = false; box.innerHTML = '<div class="thinking"><span class="dots"><span></span><span></span><span></span></span>Sam is going deeper…</div>';
-    let last = 0;
+    let last = 0, usage: UsageSummary | undefined;
     try {
-      const text = await postStream("/api/sam", { session: promptSession(sRef.current), kind: "deep", title }, (t) => { const n = Date.now(); if (n - last > 300) { last = n; box.innerHTML = md(t); } });
+      const text = await postStream("/api/sam", { session: promptSession(sRef.current), kind: "deep", title }, (t) => { const n = Date.now(); if (n - last > 300) { last = n; box.innerHTML = md(t); } }, undefined, (u) => { usage = u; });
       box.innerHTML = md(text);
-      save((x) => ({ ...x, solution: { ...x.solution, deep: { ...x.solution.deep, [key]: text } } }));
+      save((x) => ({ ...x, solution: { ...x.solution, deep: { ...x.solution.deep, [key]: text } }, usage: addUsage(x.usage, usage) }));
     } catch (e) { box.innerHTML = ""; toast(errCopy(e)); }
     finally { setDeepBusy(false); }
   }
@@ -253,9 +254,10 @@ function SolutionView({ s, steps, err, busy, onRetry, onStop, onRegen, save, toa
   async function askSam(msg: string) {
     msg = msg.trim(); if (!msg || samBusy) return;
     setSamBusy(true); setQ(""); setPending({ q: msg, a: "" });
+    let usage: UsageSummary | undefined;
     try {
-      const text = await postStream("/api/sam", { session: promptSession(sRef.current), kind: "follow", message: msg }, (t) => setPending({ q: msg, a: t }));
-      save((x) => ({ ...x, followups: [...x.followups, { who: "me", text: msg }, { who: "sam", text }] }));
+      const text = await postStream("/api/sam", { session: promptSession(sRef.current), kind: "follow", message: msg }, (t) => setPending({ q: msg, a: t }), undefined, (u) => { usage = u; });
+      save((x) => ({ ...x, followups: [...x.followups, { who: "me", text: msg }, { who: "sam", text }], usage: addUsage(x.usage, usage) }));
     } catch (e) { setQ(msg); toast(errCopy(e)); }
     finally { setPending(null); setSamBusy(false); }
   }

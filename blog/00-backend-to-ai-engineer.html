@@ -1,0 +1,383 @@
+<title>Backend to AI Engineer, Part 0</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one reading column on Design Dojo's dotted whiteboard paper, with diagrams drawn as board elements and quotes as sticky notes. */
+:root{
+  --paper:#F6F7F9; --dot:#D9DDE5; --surface:#FFFFFF; --sunken:#FBFCFD; --ink:#1B2436; --muted:#5A6477; --faint:#8A93A3;
+  --line:#E2E5EB; --blue:#2D5BE3; --blue-hover:#1F45B8; --blue-soft:#E6EDFD; --sticky:#FFE27A; --sticky-ink:#4A3B00;
+  --green:#17724A; --green-soft:#E3F3EB; --red:#C23F37; --red-ink:#A8342D; --red-soft:#FBE7E5; --amber:#8A5A10; --amber-soft:#FBF0DC;
+  --seg1:#8FA8F0; --seg2:#6F8FEA; --seg3:#4E74E4; --seg4:#2D5BE3; --on-blue:#FFFFFF; --hl:#FFE27A;
+  --display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#11151D; --dot:#232A38; --surface:#181D28; --sunken:#141922; --ink:#E6E9EF; --muted:#9AA3B4; --faint:#6B7486;
+    --line:#2A3141; --blue:#86A3FF; --blue-hover:#A7BDFF; --blue-soft:#1F2A47; --sticky:#E3C455; --sticky-ink:#2B2200;
+    --green:#4CC08A; --green-soft:#16302A; --red:#F07B72; --red-ink:#F59A92; --red-soft:#3A1F1E; --amber:#E2B05A; --amber-soft:#352A17;
+    --seg1:#3A4C80; --seg2:#4A62A8; --seg3:#5D7AD0; --seg4:#86A3FF; --on-blue:#0D1426; --hl:rgba(227,196,85,.32);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#11151D; --dot:#232A38; --surface:#181D28; --sunken:#141922; --ink:#E6E9EF; --muted:#9AA3B4; --faint:#6B7486;
+  --line:#2A3141; --blue:#86A3FF; --blue-hover:#A7BDFF; --blue-soft:#1F2A47; --sticky:#E3C455; --sticky-ink:#2B2200;
+  --green:#4CC08A; --green-soft:#16302A; --red:#F07B72; --red-ink:#F59A92; --red-soft:#3A1F1E; --amber:#E2B05A; --amber-soft:#352A17;
+  --seg1:#3A4C80; --seg2:#4A62A8; --seg3:#5D7AD0; --seg4:#86A3FF; --on-blue:#0D1426; --hl:rgba(227,196,85,.32);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background-color:var(--paper);background-image:radial-gradient(var(--dot) 1px,transparent 1.2px);background-size:22px 22px;
+  color:var(--ink);font:17px/1.65 var(--body);-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:var(--blue)}a:hover{color:var(--blue-hover)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);letter-spacing:-.015em;line-height:1.15;margin:0;text-wrap:balance}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+.top{display:flex;align-items:center;gap:10px;max-width:760px;margin:0 auto;padding-block:18px 0}
+.logo{width:30px;height:30px;border-radius:6px;background:var(--sticky);transform:rotate(-6deg);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 0 rgba(0,0,0,.08);font:700 15px/1 var(--display);color:var(--sticky-ink)}
+.brand-n{font:700 16px/1 var(--display)}
+.brand-s{font-size:12.5px;color:var(--muted)}
+
+article{max-width:760px;margin:0 auto;padding-block:36px 80px;display:flex;flex-direction:column;gap:22px}
+article>p,article>ul{margin:0;max-width:66ch}
+.eyebrow{align-self:flex-start;font-size:13px;font-weight:600;color:var(--blue);background:var(--blue-soft);border-radius:999px;padding:4px 12px}
+h1{font-size:clamp(34px,6vw,52px);line-height:1.05;letter-spacing:-.025em;font-weight:700}
+.hl{background:linear-gradient(transparent 58%,var(--hl) 58%);padding:0 2px}
+.dek{font-size:19px;color:var(--muted);margin:0;max-width:56ch}
+.byline{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:22px}
+h2{font-size:clamp(25px,4vw,31px);font-weight:700;margin-top:26px}
+h3{font-size:19px;font-weight:700}
+strong{font-weight:600}
+code{font-family:var(--mono);font-size:.88em;background:var(--blue-soft);color:var(--ink);padding:1px 6px;border-radius:5px}
+ul.plain{padding-left:20px;display:flex;flex-direction:column;gap:6px}
+
+/* sticky-note pull quote, as on the Design Dojo board */
+.sticky{background:var(--sticky);color:var(--sticky-ink);border-radius:4px 14px 14px 14px;padding:18px 22px;box-shadow:0 2px 0 rgba(0,0,0,.06),0 10px 24px rgba(74,59,0,.12);
+  font:600 20px/1.35 var(--display);max-width:560px;transform:rotate(-1deg);margin:10px 0 10px 6px}
+.sticky.r{transform:rotate(.8deg);align-self:flex-end;margin-right:6px}
+
+figure{margin:6px 0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:16px;min-width:0}
+figcaption{font-size:14px;color:var(--muted)}
+.fig-t{font:700 15px/1.2 var(--display);letter-spacing:-.005em}
+
+/* leverage diagram */
+.lev{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.lev-col{border:1px dashed var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--sunken)}
+.lev-col h3{font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:13px;font-weight:500;border-radius:999px;padding:3px 10px;background:var(--paper);border:1px solid var(--line)}
+.chip.b{background:var(--blue-soft);border-color:transparent;color:var(--blue)}
+@media (max-width:560px){.lev{grid-template-columns:1fr}}
+
+/* pipeline */
+.pipe{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.node{flex:1 1 120px;min-width:0;background:var(--surface);border:1.5px solid var(--ink);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;position:relative}
+.node .who{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.node .what{font:700 15px/1.2 var(--display)}
+.node .eff{font-size:12.5px;color:var(--muted)}
+.node.loop{border-style:dashed}
+.node.blind{background:var(--blue-soft);border-color:var(--blue)}
+.node.blind .who{color:var(--blue)}
+.arrow{align-self:center;color:var(--faint);font:700 18px/1 var(--display)}
+@media (max-width:620px){.pipe{flex-direction:column}.arrow{transform:rotate(90deg)}}
+
+/* visibility matrix */
+.tablewrap{overflow-x:auto;margin:0 -4px}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:14px}
+th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:center}
+th:first-child,td:first-child{text-align:left}
+thead th{font:600 12.5px/1.2 var(--body);color:var(--muted)}
+td .y,td .n,td .l{display:inline-flex;width:26px;height:22px;border-radius:5px;align-items:center;justify-content:center;font:500 12px/1 var(--mono)}
+.y{background:var(--green-soft);color:var(--green)}
+.n{background:var(--red-soft);color:var(--red-ink)}
+.l{background:var(--amber-soft);color:var(--amber);width:auto!important;padding:0 8px}
+tr.focus td{background:var(--blue-soft)}
+
+/* 20/80 bar */
+.split{display:flex;height:44px;border-radius:9px;overflow:hidden;gap:3px}
+.split div{display:flex;align-items:center;padding:0 12px;font:600 13.5px/1.2 var(--body);white-space:nowrap;overflow:hidden}
+.split .p{flex:20;background:var(--sticky);color:var(--sticky-ink)}
+.split .e{flex:80;background:var(--blue);color:var(--on-blue)}
+.split-l{display:flex;flex-wrap:wrap;gap:6px}
+
+/* effort bars */
+.eff-rows{display:flex;flex-direction:column;gap:10px}
+.eff-row{display:grid;grid-template-columns:minmax(0,190px) 1fr 64px;gap:12px;align-items:center;font-size:14.5px}
+.track{height:12px;border-radius:6px;background:var(--line);overflow:hidden}
+.track i{display:block;height:100%;border-radius:6px}
+.lv-low{width:33%;background:var(--seg1)}.lv-medium{width:66%;background:var(--seg3)}.lv-high{width:100%;background:var(--seg4)}
+.eff-row .mono{font-size:12.5px;color:var(--muted);text-align:right}
+@media (max-width:480px){.eff-row{grid-template-columns:1fr 54px}.eff-row .track{grid-column:1 / -1;grid-row:2}}
+
+/* determinism svg */
+.det{width:100%;height:auto;display:block}
+.det .lbl{fill:var(--muted);font:500 12px var(--body)}
+.det .ttl{fill:var(--ink);font:700 14px var(--display)}
+.det .box{fill:var(--surface);stroke:var(--ink);stroke-width:1.5}
+.det .ln{stroke:var(--faint);stroke-width:1.5;fill:none}
+.det .ok{fill:var(--green)}
+.det .meh{fill:var(--amber)}
+.det .bad{fill:var(--red)}
+.det .div{stroke:var(--line);stroke-width:1}
+
+/* carry vs unlearn */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.col{border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.col.keep{background:var(--green-soft)}
+.col.drop{background:var(--red-soft)}
+.col h3{font-size:16px}
+.col.keep h3{color:var(--green)}.col.drop h3{color:var(--red-ink)}
+.item{display:flex;flex-direction:column;gap:2px}
+.item b{font-weight:600}
+.item span{font-size:14.5px;color:var(--muted)}
+@media (max-width:620px){.cmp{grid-template-columns:1fr}}
+
+/* self-check */
+.check-list{display:flex;flex-direction:column;gap:4px}
+.check{display:flex;gap:12px;align-items:flex-start;min-height:44px;padding:8px 0;cursor:pointer;font-size:16px}
+.check input{width:18px;height:18px;accent-color:var(--blue);margin-top:4px;flex-shrink:0}
+.result{font-size:15px;border-radius:10px;padding:12px 14px;background:var(--paper);border:1px solid var(--line)}
+
+/* roadmap */
+.road{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--line);margin-left:8px}
+.stop{position:relative;padding:0 0 18px 22px;display:flex;flex-direction:column;gap:2px}
+.stop::before{content:"";position:absolute;left:-8px;top:5px;width:14px;height:14px;border-radius:999px;background:var(--surface);border:2px solid var(--faint)}
+.stop.now::before{background:var(--blue);border-color:var(--blue)}
+.stop b{font:700 16px/1.3 var(--display)}
+.stop span{font-size:14.5px;color:var(--muted)}
+.tag{align-self:flex-start;font-size:11.5px;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--blue-soft);color:var(--blue);margin-top:3px}
+
+.cta{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:10px}
+.cta h2{margin:0;font-size:24px}
+.todo{background:var(--amber-soft);color:var(--amber);font:500 .82em/1.4 var(--mono);padding:1px 6px;border-radius:5px}
+@media (prefers-reduced-motion:reduce){.sticky{transform:none}}
+</style>
+
+<header class="top">
+  <span class="logo" aria-hidden="true">D</span>
+  <div><div class="brand-n">Design Dojo</div><div class="brand-s">Notes from the build</div></div>
+</header>
+
+<article>
+  <span class="eyebrow">Backend → AI Engineer · Part 0</span>
+  <h1>I'm a backend engineer. AI lets me <span class="hl">build more than ever</span>, so I'm learning to engineer it.</h1>
+  <p class="dek">No PhD, no model training. One project built from scratch, what my backend habits got right, and what I had to unlearn.</p>
+  <div class="byline"><span><span class="todo">[TODO: your name]</span></span><span>·</span><span>8 min read</span><span>·</span><span class="todo">[TODO: date]</span></div>
+
+  <p>Here's a moment you might recognise.</p>
+  <p>You have an idea you'd normally park for "someday": a side project, an internal tool, a feature nobody has time for. Then you sit down with an AI model and the tools around it, and by the end of the weekend it works.</p>
+  <p>That happened to me more than once, and it changed how I see my job. I've been a backend engineer for <span class="todo">[TODO: X]</span> years. I'm not moving into AI engineering because I'm afraid of being left behind. I'm moving because <strong>one engineer who knows how to build with AI can now do the work of a small team</strong>, for the companies they work with and for themselves.</p>
+  <p>I want to be that engineer. This series is how I'm getting there, one build at a time.</p>
+
+  <figure>
+    <div class="fig-t">What changed for me</div>
+    <div class="lev">
+      <div class="lev-col">
+        <h3>Before: what I'd take on alone</h3>
+        <div class="chips"><span class="chip">APIs</span><span class="chip">Databases</span><span class="chip">Queues</span><span class="chip">Background jobs</span></div>
+      </div>
+      <div class="lev-col">
+        <h3>Now: what I can take on alone</h3>
+        <div class="chips"><span class="chip">APIs</span><span class="chip">Databases</span><span class="chip">Queues</span><span class="chip b">An AI interviewer</span><span class="chip b">Diagram understanding</span><span class="chip b">Grading with evidence</span><span class="chip b">Voice in and out</span></div>
+      </div>
+    </div>
+    <figcaption>Everything in blue on the right is already part of Design Dojo, the project I'm building in this series.</figcaption>
+  </figure>
+
+  <h2>First, what is "AI engineering"?</h2>
+  <p>I used to think AI engineering meant training models: maths, GPUs and research papers. For most AI engineering roles, it doesn't.</p>
+  <div class="sticky">AI engineering is building reliable products on top of models someone else trained.</div>
+  <p>When I read that, my first thought was: <em>so it's backend work with a new dependency.</em> It partly is. The catch is the dependency itself. It doesn't always give the same answer twice, it's sometimes confidently wrong, and you talk to it in English.</p>
+  <p>So the job isn't calling an API. It's building a system that works even when its most important component is unpredictable. As backend engineers, we've been doing a version of that for our whole careers.</p>
+
+  <h2>Why I picked a project over courses</h2>
+  <p>I started with tutorials. <span class="todo">[TODO: one honest line about how that went]</span> Tutorials show you the happy path, and I learned quickly that the real lessons are in the failures: the reply that comes back as broken JSON, or the prompt that works nine times and fails on the tenth.</p>
+  <p>So I set myself one rule: <strong>pick one project, build it from scratch, and make every new concept land in that codebase.</strong></p>
+
+  <h2>Meet Design Dojo</h2>
+  <p>Design Dojo is a mock system design interview app. You practise an interview with an AI and get an honest grade at the end. I chose it because I prepare for these interviews myself, so I'm the first user, and I can tell straight away when the AI does a bad job.</p>
+  <ul class="plain">
+    <li><strong>Alex, the interviewer,</strong> scopes the problem with you, watches your whiteboard, pushes back on hand-waving, then grades you on storage, distributed systems, observability and problem scoping.</li>
+    <li><strong>Sam, the architect,</strong> writes a model solution after the interview, compares it with yours and answers follow-up questions.</li>
+  </ul>
+  <p>It started as a single HTML file with the prompts written inline. That prototype taught me my first big lesson.</p>
+
+  <figure>
+    <div class="fig-t">Where the work actually is</div>
+    <div class="split" role="img" aria-label="Writing the prompt is about 20 percent of the work; engineering around it is about 80 percent">
+      <div class="p">Prompt</div>
+      <div class="e">Engineering around the model</div>
+    </div>
+    <div class="split-l"><span class="chip">State</span><span class="chip">Output validation</span><span class="chip">Error handling</span><span class="chip">Cost and latency</span><span class="chip">Security</span><span class="chip">Evaluation</span></div>
+    <figcaption>My rough split after moving from the prototype to a real app. The prompt mattered, but most of my time went into everything around it.</figcaption>
+  </figure>
+
+  <h2>How a mock-interview app makes me an AI engineer</h2>
+  <p>Fair question. Here's what it has forced me to work out.</p>
+
+  <h3>1. It's a pipeline, not a chatbot</h3>
+  <p>One interview is several model calls, each with one job. Deciding what each call is allowed to see turned out to be the real design work.</p>
+  <figure>
+    <div class="fig-t">One interview, six kinds of model call</div>
+    <div class="pipe">
+      <div class="node"><span class="who">Alex</span><span class="what">Write a hidden spec</span><span class="eff">once, at the start</span></div>
+      <span class="arrow" aria-hidden="true">→</span>
+      <div class="node loop"><span class="who">Alex</span><span class="what">Interview turns</span><span class="eff">repeats every reply</span></div>
+      <span class="arrow" aria-hidden="true">→</span>
+      <div class="node"><span class="who">Alex</span><span class="what">Debrief and grade</span><span class="eff">verdict with evidence</span></div>
+      <span class="arrow" aria-hidden="true">→</span>
+      <div class="node blind"><span class="who">Sam</span><span class="what">Model solution</span><span class="eff">never sees your design</span></div>
+      <span class="arrow" aria-hidden="true">→</span>
+      <div class="node"><span class="who">Sam</span><span class="what">Compare with yours</span><span class="eff">then answers follow-ups</span></div>
+    </div>
+    <figcaption>The dashed box runs once per reply. The blue box is deliberately kept from seeing the candidate's design.</figcaption>
+  </figure>
+
+  <h3>2. It has to keep a secret</h3>
+  <p>When an interview starts, Alex writes a hidden spec: the real requirements, the scale and the curveballs. The candidate must not see it until the debrief. I learned quickly that "please don't reveal this" in a prompt is not a security boundary, so the spec stays on the server.</p>
+
+  <h3>3. It has to avoid bias</h3>
+  <p>Sam designs the model solution without seeing your design. If it could see yours, it would quietly anchor to it. Comparing the two is a separate step. Here's who sees what:</p>
+  <figure>
+    <div class="fig-t">What each step is allowed to see</div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th scope="col">Step</th><th scope="col">Hidden spec</th><th scope="col">Transcript</th><th scope="col">Whiteboard</th><th scope="col">Model solution</th></tr></thead>
+        <tbody>
+          <tr><td>Candidate</td><td><span class="l">after debrief</span></td><td><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="l">at the end</span></td></tr>
+          <tr><td>Alex: interview turn</td><td><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="n">✕</span></td></tr>
+          <tr><td>Alex: debrief</td><td><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="n">✕</span></td></tr>
+          <tr class="focus"><td><strong>Sam: model solution</strong></td><td><span class="y">✓</span></td><td><span class="n">✕</span></td><td><span class="n">✕</span></td><td>n/a</td></tr>
+          <tr><td>Sam: comparison</td><td><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="y">✓</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <figcaption>Taken from the prompt builders in the repo. Context is an access-control decision, just like permissions in a backend.</figcaption>
+  </figure>
+
+  <h3>4. It has to "see" things that aren't text</h3>
+  <p>A model can't look at a whiteboard the way you do, so I turn the diagram into structured text, with an id for every box and arrow. That also lets Alex pin a comment to one specific box.</p>
+
+  <h3>5. It has to trade speed against quality</h3>
+  <p>A live interview turn has to come back quickly. A debrief can take a minute if it's thorough. So each call gets its own effort level.</p>
+  <figure>
+    <div class="fig-t">Effort level per call</div>
+    <div class="eff-rows">
+      <div class="eff-row"><span>Interview turn</span><div class="track"><i class="lv-low"></i></div><span class="mono">low</span></div>
+      <div class="eff-row"><span>Hidden spec</span><div class="track"><i class="lv-medium"></i></div><span class="mono">medium</span></div>
+      <div class="eff-row"><span>Comparison</span><div class="track"><i class="lv-medium"></i></div><span class="mono">medium</span></div>
+      <div class="eff-row"><span>Sam's follow-ups</span><div class="track"><i class="lv-medium"></i></div><span class="mono">medium</span></div>
+      <div class="eff-row"><span>Debrief</span><div class="track"><i class="lv-high"></i></div><span class="mono">high</span></div>
+      <div class="eff-row"><span>Model solution</span><div class="track"><i class="lv-high"></i></div><span class="mono">high</span></div>
+    </div>
+    <figcaption>The same idea as choosing a fast path and a slow path in a backend. The candidate waits on the top row; the bottom rows run after the interview.</figcaption>
+  </figure>
+
+  <h3>6. It has to grade fairly</h3>
+  <p>A wrong grade is worse than no grade. This is pushing me towards evals, the part of AI engineering I know least about so far. There's a post coming on it.</p>
+
+  <h2>What I brought with me from backend</h2>
+  <p>If you're making this move too, here's the good news: more transfers than you'd think. And some of it has to be unlearned.</p>
+  <figure>
+    <div class="cmp">
+      <div class="col keep">
+        <h3>Carries over</h3>
+        <div class="item"><b>Every dependency is unreliable</b><span>Timeouts, retries and clear error codes. I map rate limits, overlong prompts and refusals to specific errors, like any flaky service.</span></div>
+        <div class="item"><b>Validate at the boundary</b><span>I never trusted client input. Now I don't trust model output either. A small layer fixes replies when a list comes back as a string or a score as text.</span></div>
+        <div class="item"><b>Know where state lives</b><span>Alex has to remember facts it stated ten minutes ago. That's a state problem in disguise.</span></div>
+        <div class="item"><b>Measure before optimising</b><span>Latency, cost and failure rate still rule. Tokens are the new compute bill.</span></div>
+        <div class="item"><b>Design for 3 a.m.</b><span>The best question is still: what happens when this goes wrong?</span></div>
+      </div>
+      <div class="col drop">
+        <h3>Had to unlearn</h3>
+        <div class="item"><b>Same input, same output</b><span>The same prompt can give a different answer every run. A test that passes once proves very little.</span></div>
+        <div class="item"><b>Unit tests prove it works</b><span>I can't assert <code>reply == expected</code>. I need evals: many examples, a scoring method and a pass rate.</span></div>
+        <div class="item"><b>The schema is the contract</b><span>I wrote "reply with only JSON" and assumed it would hold. Sometimes the JSON came back wrapped in code fences, or with fields in the wrong shape.</span></div>
+        <div class="item"><b>Code is the source of truth</b><span>Much of the app's behaviour lives in English prompts. One changed sentence can shift behaviour more than a code change.</span></div>
+        <div class="item"><b>If it's broken, it throws</b><span>A bad model answer doesn't raise an exception. It just looks fine.</span></div>
+      </div>
+    </div>
+  </figure>
+
+  <p>The first item on the right is the one that changes how you test. Here's the difference in one picture.</p>
+  <figure>
+    <svg class="det" viewBox="0 0 640 210" role="img" aria-label="A normal API returns the same result for the same input every time. A model can return different grades for the same transcript across five runs.">
+      <text class="ttl" x="20" y="26">A normal API</text>
+      <text class="lbl" x="20" y="44">same request, five runs</text>
+      <rect class="box" x="20" y="88" width="92" height="40" rx="8"/>
+      <text class="lbl" x="40" y="113">request</text>
+      <path class="ln" d="M112 108 H190"/>
+      <circle class="ok" cx="210" cy="108" r="9"/>
+      <text class="lbl" x="196" y="140">200 OK ×5</text>
+      <line class="div" x1="320" y1="14" x2="320" y2="196"/>
+      <text class="ttl" x="344" y="26">A model</text>
+      <text class="lbl" x="344" y="44">same transcript, five runs</text>
+      <rect class="box" x="344" y="88" width="98" height="40" rx="8"/>
+      <text class="lbl" x="361" y="113">transcript</text>
+      <path class="ln" d="M442 108 C480 108 480 66 518 66"/>
+      <path class="ln" d="M442 108 C480 108 480 87 518 87"/>
+      <path class="ln" d="M442 108 H518"/>
+      <path class="ln" d="M442 108 C480 108 480 129 518 129"/>
+      <path class="ln" d="M442 108 C480 108 480 150 518 150"/>
+      <circle class="ok" cx="528" cy="66" r="7"/><text class="lbl" x="544" y="70">Hire</text>
+      <circle class="ok" cx="528" cy="87" r="7"/><text class="lbl" x="544" y="91">Hire</text>
+      <circle class="meh" cx="528" cy="108" r="7"/><text class="lbl" x="544" y="112">Lean Hire</text>
+      <circle class="ok" cx="528" cy="129" r="7"/><text class="lbl" x="544" y="133">Hire</text>
+      <circle class="bad" cx="528" cy="150" r="7"/><text class="lbl" x="544" y="154">Lean No Hire</text>
+      <text class="lbl" x="344" y="190">Illustration, not measured data</text>
+    </svg>
+    <figcaption>This is why I need evals, not just tests. Measuring how much Design Dojo's grades actually vary between runs is on the roadmap below.</figcaption>
+  </figure>
+
+  <div class="sticky r">A bad API call throws an error. A bad model answer looks perfectly fine: confident, well formatted, and wrong.</div>
+
+  <h2>Try this yourself</h2>
+  <p>If you're a backend engineer eyeing AI, pick any LLM feature you've used or built, and tick each question you could answer today.</p>
+  <figure>
+    <div class="check-list" id="quiz">
+      <label class="check"><input type="checkbox" id="q1">What happens if the model returns something you didn't expect?</label>
+      <label class="check"><input type="checkbox" id="q2">How would you know it gave a wrong answer?</label>
+      <label class="check"><input type="checkbox" id="q3">What does one request cost, and how long does it take?</label>
+      <label class="check"><input type="checkbox" id="q4">What can the model see that the user shouldn't?</label>
+    </div>
+    <div class="result" id="quiz-result" aria-live="polite">Tick the ones you can answer.</div>
+  </figure>
+
+  <h2>Where this series goes next</h2>
+  <p>Each post covers one thing I built and what it taught me.</p>
+  <div class="road">
+    <div class="stop now"><b>Part 0: Why I'm doing this</b><span>You're reading it.</span></div>
+    <div class="stop"><b>Adding a cache</b><span>Why caching an LLM is nothing like caching an API.</span><span class="tag">next</span></div>
+    <div class="stop"><b>What does one interview cost?</b><span>Measuring tokens, latency and money.</span></div>
+    <div class="stop"><b>Is my AI grader fair?</b><span>Building my first evals.</span></div>
+  </div>
+  <p>I'll share what broke, not just what worked.</p>
+
+  <div class="cta">
+    <h2>Over to you</h2>
+    <p style="margin:0">If you've moved from backend, or anywhere else, into AI engineering: which habit helped you most, and which one got in your way? And if you're starting out, follow along and let's work it out together.</p>
+    <p style="margin:0" class="mono"><span class="todo">[LINK: Design Dojo on GitHub]</span> · <span class="todo">[LINK: follow the series]</span></p>
+  </div>
+</article>
+
+<script>
+(function(){
+  var boxes=[].slice.call(document.querySelectorAll('#quiz input'));
+  var out=document.getElementById('quiz-result');
+  var msgs=[
+    "Tick the ones you can answer.",
+    "One down. Everyone starts somewhere, and the rest is what this series covers.",
+    "Two of four. You already think about failure like a backend engineer.",
+    "Three of four. You're closer to AI engineering than you might think.",
+    "All four. You already think like an AI engineer. Now you just need the reps."
+  ];
+  function update(){ out.textContent=msgs[boxes.filter(function(b){return b.checked;}).length]; }
+  boxes.forEach(function(b){ b.addEventListener('change',update); });
+  update();
+})();
+</script>
